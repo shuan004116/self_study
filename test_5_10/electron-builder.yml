@@ -1,0 +1,24 @@
+appId: com.focusflow.desktop
+productName: FocusFlow
+directories:
+  output: release
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+  - "!electron/**/*.ts"
+  - "!scripts/**/*"
+  - "!src/**/*"
+  - "!参考图/**/*"
+  - "!**/*.md"
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: "FocusFlow-${version}-Setup.${ext}"
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

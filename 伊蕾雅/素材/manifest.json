@@ -1,0 +1,171 @@
+{
+  "spec": {
+    "frameW": 192,
+    "frameH": 208,
+    "cols": 8,
+    "rows": 22,
+    "totalW": 1536,
+    "totalH": 4576
+  },
+  "states": [
+    {
+      "name": "idle",
+      "row": 0,
+      "required": 6,
+      "filled": 6,
+      "source": "多种形态.png"
+    },
+    {
+      "name": "walkR",
+      "row": 1,
+      "required": 8,
+      "filled": 8,
+      "source": "多种形态.png"
+    },
+    {
+      "name": "walkL",
+      "row": 2,
+      "required": 8,
+      "filled": 8,
+      "source": "多种形态.png"
+    },
+    {
+      "name": "greet",
+      "row": 3,
+      "required": 6,
+      "filled": 6,
+      "source": "拓展.png"
+    },
+    {
+      "name": "happy",
+      "row": 4,
+      "required": 8,
+      "filled": 8,
+      "source": "拓展.png"
+    },
+    {
+      "name": "sad",
+      "row": 5,
+      "required": 6,
+      "filled": 6,
+      "source": "拓展.png"
+    },
+    {
+      "name": "thinking",
+      "row": 6,
+      "required": 6,
+      "filled": 6,
+      "source": "拓展.png"
+    },
+    {
+      "name": "sleep",
+      "row": 7,
+      "required": 4,
+      "filled": 4,
+      "source": "拓展.png"
+    },
+    {
+      "name": "coding",
+      "row": 8,
+      "required": 6,
+      "filled": 6,
+      "source": "拓展.png"
+    },
+    {
+      "name": "drink",
+      "row": 9,
+      "required": 6,
+      "filled": 6,
+      "source": "generated"
+    },
+    {
+      "name": "stretch",
+      "row": 10,
+      "required": 8,
+      "filled": 8,
+      "source": "generated"
+    },
+    {
+      "name": "comfort",
+      "row": 11,
+      "required": 6,
+      "filled": 6,
+      "source": "generated"
+    },
+    {
+      "name": "drag",
+      "row": 12,
+      "required": 4,
+      "filled": 4,
+      "source": "generated"
+    },
+    {
+      "name": "fall",
+      "row": 13,
+      "required": 4,
+      "filled": 4,
+      "source": "generated"
+    },
+    {
+      "name": "eat",
+      "row": 14,
+      "required": 6,
+      "filled": 6,
+      "source": "generated"
+    },
+    {
+      "name": "angry",
+      "row": 15,
+      "required": 6,
+      "filled": 6,
+      "source": "generated"
+    },
+    {
+      "name": "celebrate",
+      "row": 16,
+      "required": 8,
+      "filled": 8,
+      "source": "generated"
+    },
+    {
+      "name": "curious",
+      "row": 17,
+      "required": 4,
+      "filled": 4,
+      "source": "generated"
+    },
+    {
+      "name": "read",
+      "row": 18,
+      "required": 6,
+      "filled": 6,
+      "source": "generated"
+    },
+    {
+      "name": "dance",
+      "row": 19,
+      "required": 8,
+      "filled": 8,
+      "source": "generated"
+    },
+    {
+      "name": "hide",
+      "row": 20,
+      "required": 4,
+      "filled": 4,
+      "source": "generated"
+    },
+    {
+      "name": "peek",
+      "row": 21,
+      "required": 4,
+      "filled": 4,
+      "source": "generated"
+    }
+  ],
+  "stats": {
+    "totalFilled": 132,
+    "totalRequired": 132,
+    "missing": 0
+  }
+}

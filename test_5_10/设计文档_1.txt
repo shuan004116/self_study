@@ -1,0 +1,1094 @@
+FocusFlow — 智能桌面学习专注平台 · 整体框架设计文档
+
+一、项目概述
+
+产品名称： FocusFlow
+
+
+产品类型： 桌面端学习专注与时间管理软件
+
+
+技术路线： Electron + React + TypeScript
+
+
+核心定位： 面向学生、考研/考公备考者及终身学习者的智能化桌面学习伴侣，集成番茄工作法、待办管理、音乐伴学、知识管理与数据复盘于一体。
+
+
+设计理念：
+
+极简克制，零干扰界面
+深度集成音乐生态，解决学习背景音痛点
+引入科学学习方法论工具（费曼笔记、艾宾浩斯复习等）
+数据驱动的个人成长可视化
+
+
+二、技术架构
+
+2.1 技术栈选型
+
+层级	技术方案	说明
+框架	Electron	跨平台桌面应用，支持 Windows/macOS/Linux
+前端	React 18 + TypeScript	组件化开发，类型安全
+状态管理	Zustand	轻量级全局状态管理
+样式方案	Tailwind CSS + CSS Modules	原子化样式 + 模块隔离
+数据存储	SQLite（本地） + 可选云同步	本地优先，离线可用
+音乐集成	各平台开放API / OAuth2.0授权	安全合规接入
+构建工具	Vite + electron-vite	快速构建与热更新
+自动更新	electron-updater	静默检测与更新
+
+2.2 项目目录结构
+
+text
+text
+focusflow/
+├── electron/                    # 主进程
+│   ├── main.ts                  # 主进程入口
+│   ├── preload.ts               # 预加载脚本（安全桥接）
+│   ├── ipc/                     # IPC通信处理器
+│   │   ├── timer.ipc.ts         # 计时器相关
+│   │   ├── task.ipc.ts          # 任务相关
+│   │   ├── music.ipc.ts         # 音乐相关
+│   │   ├── data.ipc.ts          # 数据统计相关
+│   │   └── settings.ipc.ts      # 设置相关
+│   ├── db/                      # 数据库层
+│   │   ├── connection.ts        # SQLite连接管理
+│   │   ├── migrations/          # 数据库迁移
+│   │   └── repositories/        # 数据访问对象
+│   │       ├── task.repo.ts
+│   │       ├── pomodoro.repo.ts
+│   │       ├── note.repo.ts
+│   │       └── stats.repo.ts
+│   ├── services/                # 后台服务
+│   │   ├── music/               # 音乐集成服务
+│   │   │   ├── qq-music.service.ts
+│   │   │   ├── netease.service.ts
+│   │   │   └── music-manager.ts
+│   │   ├── reminder.service.ts  # 提醒服务
+│   │   ├── scheduler.service.ts # 调度服务
+│   │   └── export.service.ts    # 数据导出服务
+│   └── utils/
+│       ├── tray.ts              # 系统托盘
+│       ├── notification.ts      # 系统通知
+│       └── auto-updater.ts
+├── src/                         # 渲染进程（React应用）
+│   ├── main.tsx                 # 应用入口
+│   ├── App.tsx                  # 根组件
+│   ├── components/              # 通用组件
+│   │   ├── ui/                  # 基础UI组件库
+│   │   ├── layout/              # 布局组件
+│   │   │   ├── Sidebar.tsx      # 左侧导航栏
+│   │   │   ├── MainArea.tsx     # 中央工作区
+│   │   │   ├── RightPanel.tsx   # 右侧助手面板
+│   │   │   └── TitleBar.tsx     # 自定义标题栏
+│   │   └── shared/              # 共享组件
+│   ├── features/                # 功能模块
+│   │   ├── timer/               # 番茄钟模块
+│   │   │   ├── components/
+│   │   │   │   ├── PomodoroClock.tsx
+│   │   │   │   ├── TimerControls.tsx
+│   │   │   │   ├── SessionHistory.tsx
+│   │   │   │   └── BreakScreen.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useTimer.ts
+│   │   │   │   └── useTimerSettings.ts
+│   │   │   └── store/
+│   │   │       └── timerStore.ts
+│   │   ├── tasks/               # 任务管理模块
+│   │   │   ├── components/
+│   │   │   │   ├── TaskList.tsx
+│   │   │   │   ├── TaskItem.tsx
+│   │   │   │   ├── TaskForm.tsx
+│   │   │   │   ├── TaskDetail.tsx
+│   │   │   │   ├── CalendarView.tsx
+│   │   │   │   ├── GanttView.tsx
+│   │   │   │   └── TodayFocus.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useTasks.ts
+│   │   │   │   └── useDragDrop.ts
+│   │   │   └── store/
+│   │   │       └── taskStore.ts
+│   │   ├── music/               # 音乐伴学模块
+│   │   │   ├── components/
+│   │   │   │   ├── MusicPanel.tsx
+│   │   │   │   ├── PlayerBar.tsx
+│   │   │   │   ├── PlaylistBrowser.tsx
+│   │   │   │   ├── NowPlaying.tsx
+│   │   │   │   ├── VolumeControl.tsx
+│   │   │   │   ├── MusicSelector.tsx   # 选择音乐源
+│   │   │   │   └── SmartPlaylist.tsx   # 智能歌单
+│   │   │   ├── hooks/
+│   │   │   │   ├── useMusicPlayer.ts
+│   │   │   │   └── useMusicSource.ts
+│   │   │   └── store/
+│   │   │       └── musicStore.ts
+│   │   ├── notes/               # 知识笔记模块
+│   │   │   ├── components/
+│   │   │   │   ├── NoteEditor.tsx
+│   │   │   │   ├── NoteCard.tsx
+│   │   │   │   ├── NoteList.tsx
+│   │   │   │   ├── FeynmanMode.tsx    # 费曼学习模式
+│   │   │   │   └── QuickNote.tsx      # 快速速记
+│   │   │   └── store/
+│   │   │       └── noteStore.ts
+│   │   ├── stats/               # 数据统计模块
+│   │   │   ├── components/
+│   │   │   │   ├── Dashboard.tsx       # 数据仪表盘
+│   │   │   │   ├── WeeklyReport.tsx
+│   │   │   │   ├── MonthlyReport.tsx
+│   │   │   │   ├── FocusChart.tsx
+│   │   │   │   ├── TaskAnalysis.tsx
+│   │   │   │   └── GrowthCurve.tsx
+│   │   │   └── store/
+│   │   │       └── statsStore.ts
+│   │   ├── settings/            # 设置模块
+│   │   │   ├── components/
+│   │   │   │   ├── GeneralSettings.tsx
+│   │   │   │   ├── TimerSettings.tsx
+│   │   │   │   ├── MusicSettings.tsx
+│   │   │   │   ├── AccountSettings.tsx
+│   │   │   │   ├── ThemeSettings.tsx
+│   │   │   │   └── DataSettings.tsx
+│   │   │   └── store/
+│   │   │       └── settingsStore.ts
+│   │   └── review/              # 复习计划模块
+│   │       ├── components/
+│   │       │   ├── ReviewSchedule.tsx
+│   │       │   ├── ReviewCard.tsx
+│   │       │   └── ReviewReminder.tsx
+│   │       └── store/
+│   │           └── reviewStore.ts
+│   ├── hooks/                   # 全局钩子
+│   ├── lib/                     # 工具库
+│   │   ├── ipc.ts               # IPC调用封装
+│   │   ├── date.ts              # 日期工具
+│   │   └── constants.ts         # 常量定义
+│   ├── types/                   # TypeScript类型定义
+│   │   ├── task.types.ts
+│   │   ├── timer.types.ts
+│   │   ├── music.types.ts
+│   │   ├── note.types.ts
+│   │   └── settings.types.ts
+│   └── styles/                  # 全局样式
+│       ├── globals.css
+│       ├── themes/
+│       │   ├── light.css
+│       │   └── dark.css
+│       └── animations.css
+├── shared/                      # 主进程与渲染进程共享
+│   └── types.ts
+├── resources/                   # 静态资源
+│   ├── icons/
+│   ├── sounds/                  # 白噪音音频
+│   └── images/
+├── electron-builder.yml         # 打包配置
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── tailwind.config.js
+
+
+三、核心功能模块详细设计
+
+3.1 智能番茄钟系统
+
+功能描述：
+基于经典番茄工作法（25分钟专注 + 5分钟短休息 + 20分钟长休息），提供高度可定制的专注计时体验。
+
+
+核心功能清单：
+
+支持自定义专注/短休息/长休息时长
+支持正向计时与倒计时两种模式
+番茄钟与具体待办任务绑定，完成自动记录耗时
+连续完成4个番茄后自动触发长休息
+休息时段提供眼部放松、颈椎活动指导（文字+可选语音）
+支持暂停、跳过、提前结束操作
+专注中被打断时，支持快速记录打断原因（标签选择：消息通知、疲劳、环境噪音、其他）
+番茄钟完成时，提供温和的系统通知 + 可选音效
+支持快捷键全局操控（开始/暂停/重置）
+支持系统托盘常驻，最小化后仍在后台运行
+
+核心状态管理（timerStore）关键字段：
+
+text
+text
+timerStore {
+  status: 'idle' | 'focused' | 'shortBreak' | 'longBreak' | 'paused'
+  timeRemaining: number          // 剩余秒数
+  totalTime: number              // 当前阶段总时长
+  currentTaskId: string | null   // 绑定的任务ID
+  completedPomodoros: number     // 本轮连续完成数
+  sessionHistory: Session[]      // 今日会话历史
+  settings: TimerSettings        // 用户自定义配置
+}
+
+休息引导内容结构：
+
+text
+text
+breakGuidance {
+  type: 'eye' | 'neck' | 'stretch' | 'breathing'
+  duration: number               // 秒
+  steps: string[]                // 分步指导
+  audioUrl?: string              // 可选语音指导
+}
+
+
+3.2 高级待办清单系统
+
+功能描述：
+支持多层级任务管理、智能排期、拖拽排序，帮助用户从宏观规划到微观执行全面掌控学习进度。
+
+
+核心功能清单：
+
+无限层级任务结构：项目 → 任务 → 子任务
+每个任务可设置：标题、描述、优先级（P0-P3）、截止日期、标签、预估番茄数、实际番茄数
+支持任务拖拽排序与跨层级拖拽
+"今日聚焦"看板：从所有任务中筛选今日需完成项
+"艾维利时间管理法"视图：强制每日选择6项最重要的事
+日历视图：按日/周/月查看任务排期
+甘特图视图：可视化项目进度与依赖关系
+任务搜索与高级筛选（按标签、日期、优先级、状态）
+任务完成自动同步到统计模块
+支持批量操作（标记完成、删除、移动）
+
+核心数据模型（task.types.ts）关键结构：
+
+text
+text
+Task {
+  id: string
+  title: string
+  description: string
+  status: 'todo' | 'in_progress' | 'done' | 'archived'
+  priority: 'P0' | 'P1' | 'P2' | 'P3'
+  parentId: string | null        // 父任务ID
+  projectId: string | null       // 所属项目ID
+  tags: string[]
+  dueDate: string | null         // ISO日期
+  estimatedPomodoros: number
+  actualPomodoros: number
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+  order: number                  // 排序权重
+  isTodayFocus: boolean          // 是否为今日聚焦
+}
+
+Project {
+  id: string
+  name: string
+  color: string
+  tasks: Task[]
+  createdAt: string
+}
+
+Tag {
+  id: string
+  name: string
+  color: string
+}
+
+
+3.3 沉浸式音乐集成中心
+
+功能描述：
+安全、合规地接入主流音乐平台，提供无干扰的纯音乐播放体验，让音乐成为专注力的催化剂而非干扰源。
+
+
+核心功能清单：
+
+
+平台接入层：
+
+集成QQ音乐（通过官方开放平台API）
+集成网易云音乐（通过官方API）
+集成Spotify（通过Web API）
+所有平台通过OAuth 2.0授权，用户可随时解绑
+支持同时绑定多个平台，在播放器中切换音源
+
+播放器功能：
+
+完整播放器控件：播放/暂停、上一曲/下一曲、进度条拖动、音量调节
+播放模式：顺序播放、随机播放、单曲循环、列表循环
+收藏歌曲至FocusFlow内部收藏夹
+支持播放历史记录
+
+智能伴学功能：
+
+场景化歌单推荐引擎：根据用户标记的任务类型（阅读、编程、背诵、写作等），推荐适配的无歌词/轻音乐歌单
+专注模式联动：开启番茄钟后，自动播放预设歌单并进入"纯净播放"模式，屏蔽娱乐性界面元素
+音乐专注数据记录：记录每次专注时段使用的歌曲/歌单，分析不同音乐对专注时长的潜在影响
+支持本地音乐文件导入播放
+
+内置白噪音：
+
+内置高清白噪音库：雨声、海浪、森林、咖啡馆、图书馆、壁炉等
+白噪音可与外部音乐叠加播放，独立调节各自音量
+支持自定义混音：选择两种环境音并调节混合比例
+
+核心数据模型（music.types.ts）关键结构：
+
+text
+text
+MusicSource {
+  id: 'qqmusic' | 'netease' | 'spotify' | 'local'
+  name: string
+  isConnected: boolean
+  accessToken?: string
+  refreshToken?: string
+  expiresAt?: string
+}
+
+Track {
+  id: string
+  source: MusicSource['id']
+  title: string
+  artist: string
+  album: string
+  duration: number               // 秒
+  coverUrl: string
+  playUrl: string
+}
+
+Playlist {
+  id: string
+  name: string
+  source: MusicSource['id']
+  tracks: Track[]
+  isSmartGenerated: boolean      // 是否AI生成
+  taskType?: string              // 关联的任务类型
+}
+
+PlayState {
+  currentTrack: Track | null
+  isPlaying: boolean
+  volume: number                 // 0-100
+  mode: 'sequence' | 'shuffle' | 'single' | 'loop'
+  progress: number               // 当前播放秒数
+  whiteNoise: {
+    enabled: boolean
+    track: string                // 白噪音类型
+    volume: number
+  }
+}
+
+音乐平台集成服务架构（music-manager.ts）：
+
+text
+text
+MusicManager {
+  - currentSource: MusicSource
+  - registerSource(source: MusicSource): void
+  - login(sourceId: string): Promise<AuthResult>
+  - logout(sourceId: string): void
+  - search(query: string): Promise<Track[]>
+  - getPlaylists(): Promise<Playlist[]>
+  - play(track: Track): Promise<void>
+  - pause(): void
+  - next(): void
+  - previous(): void
+  - setVolume(vol: number): void
+  - getRecommendations(taskType: string): Promise<Playlist>
+}
+
+
+3.4 智能知识笔记模块
+
+功能描述：
+支持在专注过程中快速记录灵感与疑问，专注结束后进行知识整理，并通过费曼学习法工具和艾宾浩斯复习计划巩固学习成果。
+
+
+核心功能清单：
+
+
+快速速记（QuickNote）：
+
+番茄钟专注过程中，通过快捷键呼出极简速记窗口
+支持纯文本与简单Markdown
+速记自动关联当前专注任务与时间戳
+专注结束后，提示用户归档或转化为正式笔记
+
+费曼学习法工具（FeynmanMode）：
+
+选择一个知识主题，进入"教学模式"
+用户用简单语言复述核心概念（文本或语音输入）
+系统提供"简化检查"提示：是否使用了过多专业术语？能否让一个外行人听懂？
+生成"费曼卡片"，存储到知识库
+
+艾宾浩斯复习计划：
+
+对标记为"需复习"的笔记/知识点，自动生成复习时间表
+复习间隔：1天、2天、4天、7天、15天、30天
+复习提醒集成到待办清单与系统通知
+每次复习后标记掌握程度，动态调整后续间隔
+
+知识资料索引：
+
+支持拖入PDF、Word、网页链接等资料
+建立个人知识库，支持按标签分类
+在专注任务时可一键调出关联资料（侧边栏展示）
+
+核心数据模型（note.types.ts）关键结构：
+
+text
+text
+Note {
+  id: string
+  title: string
+  content: string                // Markdown内容
+  type: 'quick' | 'formal' | 'feynman'
+  taskId: string | null          // 关联任务
+  tags: string[]
+  pomodoroId: string | null      // 来源番茄钟
+  createdAt: string
+  updatedAt: string
+  reviewSchedule?: ReviewSchedule
+  attachments: Attachment[]
+}
+
+FeynmanCard {
+  id: string
+  noteId: string
+  topic: string
+  userExplanation: string
+  simplicityScore: number        // 简化度评分
+  relatedConcepts: string[]
+  createdAt: string
+}
+
+ReviewSchedule {
+  noteId: string
+  intervals: number[]            // 复习间隔（天）
+  nextReviewDate: string
+  reviewCount: number
+  mastered: boolean
+  history: {
+    date: string
+    masteryLevel: 1 | 2 | 3 | 4 | 5  // 1=模糊 5=完全掌握
+  }[]
+}
+
+Attachment {
+  id: string
+  fileName: string
+  fileType: 'pdf' | 'doc' | 'image' | 'link'
+  filePath: string
+  createdAt: string
+}
+
+
+3.5 深度数据统计与复盘
+
+功能描述：
+超越基础的时长记录，提供多维度的生产力分析与可视化，帮助用户洞察自己的学习模式，持续优化。
+
+
+核心功能清单：
+
+
+仪表盘（Dashboard）：
+
+今日概览：完成番茄数、总专注时长、完成任务数、当前连续天数
+本周/本月进度条
+最近7天专注趋势折线图
+
+专注分析：
+
+每日/周/月专注时长柱状图
+心流时段分布热力图（哪个小时段专注力最强）
+打断原因统计饼图
+平均单次专注时长趋势
+最长连续专注记录
+
+任务分析：
+
+任务耗时预估 vs 实际耗时对比图
+按标签/项目分类的任务时间分布
+任务完成率与超期率统计
+
+成长报告：
+
+每周自动生成《周度专注报告》
+每月自动生成《月度成长报告》
+专注力成长曲线（长期趋势）
+报告支持导出为PDF/图片
+
+成就系统：
+
+连续打卡天数里程碑
+累计专注时长里程碑
+特殊成就（如：连续一周零打断、单日8小时专注等）
+
+核心数据模型（stats相关）关键结构：
+
+text
+text
+FocusSession {
+  id: string
+  taskId: string | null
+  startTime: string
+  endTime: string
+  duration: number               // 实际专注秒数
+  plannedDuration: number        // 计划专注秒数
+  completed: boolean             // 是否正常完成
+  interruptReason?: string       // 中断原因
+  musicUsed?: string             // 使用的歌单/歌曲
+}
+
+DailyStats {
+  date: string
+  totalFocusMinutes: number
+  completedPomodoros: number
+  completedTasks: number
+  interruptions: number
+  topTaskType: string
+  hourlyDistribution: number[]   // 24小时分布
+}
+
+WeeklyReport {
+  weekStart: string
+  weekEnd: string
+  totalFocusHours: number
+  averageDailyFocus: number
+  taskCompletionRate: number
+  longestSession: number
+  peakFocusHour: number
+  interruptionTrend: 'improving' | 'stable' | 'worsening'
+  highlights: string[]
+  suggestions: string[]
+}
+
+
+3.6 自适应设置系统
+
+功能描述：
+提供全面的个性化配置，涵盖时间管理、外观主题、音乐偏好、数据管理等各个维度。
+
+
+设置分类：
+
+
+通用设置：
+
+开机自启动
+最小化到系统托盘
+全局快捷键配置
+语言设置（中文/English）
+通知方式（系统通知/声音/闪烁任务栏）
+
+番茄钟设置：
+
+专注时长（默认25分钟，可调）
+短休息时长（默认5分钟，可调）
+长休息时长（默认20分钟，可调）
+长休息间隔（默认每4个番茄，可调）
+自动开始下一阶段
+休息引导内容开关
+
+音乐设置：
+
+默认音源平台
+默认歌单选择
+专注时自动播放开关
+白噪音默认开关
+白噪音与音乐默认音量比
+
+外观设置：
+
+主题切换（浅色/深色/跟随系统）
+强调色自定义
+字体大小调节
+布局模式（标准/紧凑/宽松）
+
+数据设置：
+
+数据存储位置
+自动备份开关与频率
+导出数据（JSON/CSV/PDF）
+清除数据
+
+
+四、IPC通信协议设计
+
+主进程与渲染进程通过Electron IPC安全通信，以下为主要频道：
+
+
+text
+text
+// 番茄钟相关
+'timer:start'           → { taskId: string, duration: number }
+'timer:pause'           → void
+'timer:resume'          → void
+'timer:stop'            → void
+'timer:skip-break'      → void
+'timer:tick'            → 每秒推送 { timeRemaining: number }
+'timer:complete'        → 推送 { session: FocusSession }
+'timer:status'          → 查询当前状态
+
+// 任务相关
+'task:create'           → { task: Partial<Task> }
+'task:update'           → { id: string, data: Partial<Task> }
+'task:delete'           → { id: string }
+'task:reorder'          → { ids: string[] }
+'task:get-all'          → 查询所有任务
+'task:get-today'        → 查询今日聚焦任务
+'task:search'           → { query: string, filters: TaskFilters }
+
+// 音乐相关
+'music:connect'         → { sourceId: string }
+'music:disconnect'      → { sourceId: string }
+'music:search'          → { query: string }
+'music:playlists'       → 获取歌单列表
+'music:play'            → { track: Track }
+'music:pause'           → void
+'music:next'            → void
+'music:prev'            → void
+'music:set-volume'      → { volume: number }
+'music:state'           → 查询播放状态
+'music:state-changed'   → 推送播放状态变化
+
+// 笔记相关
+'note:create'           → { note: Partial<Note> }
+'note:update'           → { id: string, data: Partial<Note> }
+'note:delete'           → { id: string }
+'note:get-all'          → 查询所有笔记
+'note:quick-save'       → { content: string, taskId: string }
+
+// 统计相关
+'stats:daily'           → { date: string }
+'stats:weekly'          → { weekStart: string }
+'stats:monthly'         → { year: number, month: number }
+'stats:export'          → { format: 'pdf' | 'csv' | 'json', range: DateRange }
+
+// 设置相关
+'settings:get'          → 获取全部设置
+'settings:update'       → { key: string, value: any }
+
+
+五、界面布局与视觉设计规范
+
+5.1 主界面布局
+
+text
+text
+┌──────────────────────────────────────────────────────────┐
+│  [自定义标题栏: Logo]          [搜索]    [设置] [─][□][×] │
+├────────┬─────────────────────────────┬───────────────────┤
+│        │                             │                   │
+│  侧    │      中央工作区              │   右侧助手面板    │
+│  边    │                             │                   │
+│  导    │  【番茄钟模式】              │  ◆ 音乐播放器     │
+│  航    │  大号计时器 + 任务绑定       │    当前歌曲信息   │
+│  栏    │  控制按钮                    │    播放控件       │
+│        │                             │    音量调节       │
+│  ◆ 今日│  【任务模式】                │    歌单列表       │
+│  ◆ 番茄│  任务列表/日历/甘特图        │                   │
+│  ◆ 任务│  拖拽排序                    │  ◆ 白噪音混音器   │
+│  ◆ 笔记│                             │  ◆ 快速速记       │
+│  ◆ 统计│  【统计模式】                │  ◆ 今日摘要       │
+│  ◆ 设置│  仪表盘/图表                 │                   │
+│        │                             │                   │
+├────────┴─────────────────────────────┴───────────────────┤
+│  [状态栏: 当前模式] [今日番茄: 5/8] [连续打卡: 12天]      │
+└──────────────────────────────────────────────────────────┘
+
+5.2 专注模式界面（全屏沉浸）
+
+text
+text
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│                                                          │
+│                    ╭─────────────╮                       │
+│                    │             │                       │
+│                    │   24:37     │                       │
+│                    │             │                       │
+│                    ╰─────────────╯                       │
+│                                                          │
+│                  正在专注：高等数学第三章                   │
+│                                                          │
+│              [暂停]  [放弃]  [速记]                       │
+│                                                          │
+│                                                          │
+│     ♫ 播放中：Clair de Lune          🔊 ████░░ 60%      │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+
+5.3 视觉设计规范
+
+配色方案（浅色主题）：
+
+text
+text
+--bg-primary:      #FAFAF9      // 主背景（温暖米白）
+--bg-secondary:    #F0EDE8      // 次级背景
+--bg-surface:      #FFFFFF      // 卡片/面板背景
+--text-primary:    #1A1A1A      // 主文字
+--text-secondary:  #6B6560      // 次要文字
+--text-muted:      #A39E99      // 弱化文字
+--accent-primary:  #E07A5F      // 主强调色（温暖珊瑚橙）
+--accent-secondary:#81B29A      // 次强调色（柔和绿）
+--border:          #E8E4DE      // 边框
+--danger:          #E06060      // 危险/删除
+--success:         #81B29A      // 成功/完成
+
+配色方案（深色主题）：
+
+text
+text
+--bg-primary:      #1A1816      // 主背景
+--bg-secondary:    #242220      // 次级背景
+--bg-surface:      #2E2C2A      // 卡片/面板背景
+--text-primary:    #F0ECE4      // 主文字
+--text-secondary:  #A39E99      // 次要文字
+--text-muted:      #6B6560      // 弱化文字
+--accent-primary:  #E8956E      // 主强调色（柔化珊瑚）
+--accent-secondary:#8FBDA3      // 次强调色（柔化绿）
+--border:          #3A3836      // 边框
+
+字体规范：
+
+text
+text
+字体族：  "Noto Sans SC", "SF Pro Display", -apple-system, sans-serif
+标题字号：20px / 24px / 32px（加粗）
+正文字号：14px / 16px
+辅助字号：12px
+计时器：  "DM Mono" 或 "JetBrains Mono" 等宽字体，48px / 64px
+
+圆角规范：
+
+text
+text
+小组件：  8px
+卡片：    12px
+面板：    16px
+按钮：    8px
+输入框：  8px
+
+动效规范：
+
+text
+text
+过渡时长：200ms ease（常规交互）
+过渡时长：300ms ease-in-out（页面切换）
+计时器脉动：使用CSS animation，缓慢呼吸效果
+卡片出现：fadeUp 400ms ease stagger
+
+
+六、数据库设计
+
+6.1 核心表结构（SQLite）
+
+sql
+sql
+-- 项目表
+CREATE TABLE projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    archived_at TEXT
+);
+
+-- 任务表
+CREATE TABLE tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    status TEXT DEFAULT 'todo',
+    priority TEXT DEFAULT 'P2',
+    parent_id TEXT REFERENCES tasks(id),
+    project_id TEXT REFERENCES projects(id),
+    due_date TEXT,
+    estimated_pomodoros INTEGER DEFAULT 0,
+    actual_pomodoros INTEGER DEFAULT 0,
+    is_today_focus INTEGER DEFAULT 0,
+    "order" INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+);
+
+-- 任务标签关联表
+CREATE TABLE task_tags (
+    task_id TEXT REFERENCES tasks(id),
+    tag_id TEXT REFERENCES tags(id),
+    PRIMARY KEY (task_id, tag_id)
+);
+
+-- 标签表
+CREATE TABLE tags (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL
+);
+
+-- 专注会话表
+CREATE TABLE focus_sessions (
+    id TEXT PRIMARY KEY,
+    task_id TEXT REFERENCES tasks(id),
+    start_time TEXT NOT NULL,
+    end_time TEXT,
+    duration INTEGER DEFAULT 0,
+    planned_duration INTEGER NOT NULL,
+    completed INTEGER DEFAULT 0,
+    interrupt_reason TEXT,
+    music_track_id TEXT,
+    music_source TEXT
+);
+
+-- 笔记表
+CREATE TABLE notes (
+    id TEXT PRIMARY KEY,
+    title TEXT DEFAULT '',
+    content TEXT DEFAULT '',
+    type TEXT DEFAULT 'formal',
+    task_id TEXT REFERENCES tasks(id),
+    pomodoro_id TEXT REFERENCES focus_sessions(id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+-- 笔记标签关联表
+CREATE TABLE note_tags (
+    note_id TEXT REFERENCES notes(id),
+    tag_id TEXT REFERENCES tags(id),
+    PRIMARY KEY (note_id, tag_id)
+);
+
+-- 附件表
+CREATE TABLE attachments (
+    id TEXT PRIMARY KEY,
+    note_id TEXT REFERENCES notes(id),
+    file_name TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+-- 费曼卡片表
+CREATE TABLE feynman_cards (
+    id TEXT PRIMARY KEY,
+    note_id TEXT REFERENCES notes(id),
+    topic TEXT NOT NULL,
+    user_explanation TEXT NOT NULL,
+    simplicity_score INTEGER DEFAULT 0,
+    related_concepts TEXT DEFAULT '[]',
+    created_at TEXT NOT NULL
+);
+
+-- 复习计划表
+CREATE TABLE review_schedules (
+    id TEXT PRIMARY KEY,
+    note_id TEXT REFERENCES notes(id) UNIQUE,
+    intervals TEXT NOT NULL,          -- JSON数组
+    next_review_date TEXT NOT NULL,
+    review_count INTEGER DEFAULT 0,
+    mastered INTEGER DEFAULT 0,
+    history TEXT DEFAULT '[]'         -- JSON数组
+);
+
+-- 附件表
+CREATE TABLE music_history (
+    id TEXT PRIMARY KEY,
+    track_id TEXT NOT NULL,
+    source TEXT NOT NULL,
+    track_title TEXT,
+    track_artist TEXT,
+    played_at TEXT NOT NULL,
+    duration_played INTEGER DEFAULT 0,
+    pomodoro_id TEXT REFERENCES focus_sessions(id)
+);
+
+-- 设置表
+CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+
+七、核心Hook设计
+
+7.1 useTimer Hook
+
+text
+text
+useTimer():
+  - state: { status, timeRemaining, totalTime, completedPomodoros }
+  - start(taskId, duration): 开始专注
+  - pause(): 暂停
+  - resume(): 继续
+  - stop(): 停止
+  - skipBreak(): 跳过休息
+  - progress: number (0-1百分比)
+  - formattedTime: string (MM:SS)
+
+7.2 useMusicPlayer Hook
+
+text
+text
+useMusicPlayer():
+  - state: { currentTrack, isPlaying, volume, mode }
+  - play(track?): 播放指定或当前歌曲
+  - pause(): 暂停
+  - next(): 下一曲
+  - previous(): 上一曲
+  - setVolume(vol): 调节音量
+  - setMode(mode): 切换播放模式
+  - search(query): 搜索歌曲
+  - loadPlaylist(playlistId): 加载歌单
+  - connectSource(sourceId): 连接音乐平台
+  - toggleWhiteNoise(type): 开关白噪音
+  - setWhiteNoiseVolume(vol): 白噪音音量
+
+7.3 useTasks Hook
+
+text
+text
+useTasks():
+  - tasks: Task[]
+  - todayTasks: Task[]
+  - projects: Project[]
+  - createTask(data): 创建任务
+  - updateTask(id, data): 更新任务
+  - deleteTask(id): 删除任务
+  - reorderTasks(ids): 重排序
+  - toggleTodayFocus(id): 切换今日聚焦
+  - searchTasks(query, filters): 搜索
+  - getTaskStats(id): 获取单任务统计
+
+
+八、应用构建与分发
+
+8.1 打包配置（electron-builder.yml）
+
+yaml
+yaml
+appId: com.focusflow.desktop
+productName: FocusFlow
+directories:
+  output: dist
+files:
+  - "out/**/*"
+  - "resources/**/*"
+  - "package.json"
+win:
+  target: nsis
+  icon: resources/icons/icon.ico
+  artifactName: "FocusFlow-${version}-Setup.${ext}"
+mac:
+  target: dmg
+  icon: resources/icons/icon.icns
+  artifactName: "FocusFlow-${version}.${ext}"
+linux:
+  target: AppImage
+  icon: resources/icons/icon.png
+  artifactName: "FocusFlow-${version}.${ext}"
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+8.2 开发与调试命令
+
+text
+text
+# 安装依赖
+npm install
+
+# 开发模式（热更新）
+npm run dev
+
+# 构建TypeScript
+npm run build
+
+# 打包应用
+npm run package:win      # Windows
+npm run package:mac      # macOS
+npm run package:linux    # Linux
+
+# 运行测试
+npm run test
+
+
+九、开发路线图
+
+Phase 1 — 核心框架（第1-2周）
+Electron项目搭建与基础配置
+主进程/渲染进程通信框架
+SQLite数据库初始化与基础表
+自定义标题栏与三栏布局
+深色/浅色主题切换
+
+Phase 2 — 番茄钟 + 任务管理（第3-5周）
+番茄钟计时核心逻辑
+番茄钟UI（专注/休息/全屏模式）
+任务CRUD操作
+任务列表、拖拽排序
+今日聚焦功能
+日历视图
+
+Phase 3 — 音乐集成（第6-8周）
+本地白噪音系统
+QQ音乐API对接
+网易云音乐API对接
+Spotify API对接
+智能歌单推荐
+专注模式音乐联动
+
+Phase 4 — 笔记与知识管理（第9-10周）
+快速速记功能
+正式笔记编辑器（Markdown）
+费曼学习法工具
+艾宾浩斯复习计划系统
+
+Phase 5 — 数据统计与复盘（第11-12周）
+仪表盘数据汇总
+各类统计图表
+周报/月报生成
+数据导出功能
+
+Phase 6 — 打磨与发布（第13-14周）
+成就系统
+快捷键全局响应
+系统托盘与后台运行
+自动更新机制
+性能优化与Bug修复
+三平台打包与测试
+
+
+十、AI编码助手使用指引
+
+当使用AI编码工具（如Cursor、Copilot等）生成具体代码时，请将本文档的相关章节作为上下文提供给AI，并按以下方式提问：
+
+
+生成特定组件时：
+
+"请根据以下框架，使用React + TypeScript + Tailwind CSS实现[组件名]。技术栈：Electron + React。参考数据模型：[粘贴对应types]。请遵循深色主题配色方案。"
+
+
+生成IPC通信时：
+
+"请实现Electron主进程与渲染进程之间的IPC通信，用于[功能描述]。参考本文档第五节IPC通信协议。主进程使用SQLite存储数据。"
+
+
+生成数据库操作时：
+
+"请实现[功能]的数据访问层，使用better-sqlite3。参考本文档第六节的表结构设计。"
+
+
+生成新功能模块时：
+
+"请在FocusFlow项目中新增[功能模块]，包含以下子功能：[功能列表]。请创建对应的组件、Hook、Store和类型定义，遵循本文档的目录结构规范。"
+
+
+
+文档版本： v1.0
+最后更新： 2026年5月
+项目代号： FocusFlow

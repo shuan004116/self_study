@@ -1,0 +1,25 @@
+{
+  "scale": 0.8,
+  "pet_x": 1465,
+  "pet_y": 672,
+  "muted": false,
+  "app_config": {
+    "mode": "global",
+    "whitelist": [
+      "Code",
+      "WINWORD.EXE",
+      "chrome.exe"
+    ],
+    "blacklist": [
+      "steam.exe"
+    ],
+    "auto_hide_fullscreen": true
+  },
+  "reminders": {
+    "water_interval": 45,
+    "rest_interval": 60,
+    "sleep_time": "23:00",
+    "posture_interval": 30
+  },
+  "current_skin": "ikun-hoops"
+}

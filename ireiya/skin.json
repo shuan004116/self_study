@@ -1,0 +1,11 @@
+{
+  "idle":     { "line": 0, "frames": 6 },
+  "move":     { "line": 1, "frames": 8 },
+  "jump":     { "line": 2, "frames": 4 },
+  "fall":     { "line": 3, "frames": 4 },
+  "attack":   { "line": 4, "frames": 6 },
+  "hit":      { "line": 5, "frames": 4 },
+  "skill":    { "line": 6, "frames": 6 },
+  "dead":     { "line": 7, "frames": 4 },
+  "interact": { "line": 8, "frames": 6 }
+}

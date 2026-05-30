@@ -1,0 +1,7 @@
+文件夹	内容
+spritesheet.png	最终精灵图（1536×4576，22行×8列，132帧）
+frames/	51个逐帧单图（192×208 PNG，透明背景）
+anim_preview/	13条动画预览条（row_09 ~ row_21，可逐行查看帧序列）
+source/	4张原始素材图
+manifest.json	元数据（状态名、帧数、来源）
+review_sheet.png	审查表

@@ -1,0 +1,125 @@
+================================================================
+        出勤数据管理系统 - 快速启动指南
+================================================================
+
+【项目信息】
+- 学号: 12023140328
+- 出勤情况: 19次全部出勤
+- 数据库: H2 (文件数据库)
+
+================================================================
+
+【启动方式】
+
+方式1: 使用Maven命令行
+    cd E:\claude_test\test_5_19
+    mvn clean compile
+    mvn spring-boot:run
+
+方式2: 使用NetBeans
+    1. 打开NetBeans
+    2. File -> Open Project -> 选择当前目录
+    3. 右键项目 -> Run
+
+方式3: 使用启动脚本（Windows）
+    双击 run.bat
+
+================================================================
+
+【查看数据】
+
+方法1: H2控制台（推荐）
+    1. 启动程序后，打开浏览器
+    2. 访问: http://localhost:8080/h2-console
+    3. JDBC URL: jdbc:h2:file:./attendance_db
+    4. User Name: sa
+    5. Password: (留空)
+    6. 点击Connect
+
+方法2: NetBeans数据库工具
+    1. 打开NetBeans
+    2. 点击左侧Services面板
+    3. 右键Databases -> New Connection
+    4. Driver: H2 (Embedded)
+    5. Database Path: 浏览到 attendance_db.mv.db
+    6. User Name: sa
+    7. Password: (留空)
+    8. 点击OK
+
+方法3: REST API
+    浏览器访问: http://localhost:8080/api/attendance/students
+    或使用curl: curl http://localhost:8080/api/attendance/students
+
+================================================================
+
+【常用SQL查询】
+
+-- 查看所有学生
+SELECT * FROM students;
+
+-- 查看指定学生出勤记录
+SELECT s.student_number, s.student_name,
+       a.session_number, a.attendance_status
+FROM students s
+JOIN attendance_records a ON s.id = a.student_id
+WHERE s.student_number = '120231140328'
+ORDER BY a.session_number;
+
+-- 统计出勤情况
+SELECT s.student_number,
+       s.total_attendance AS 正常出勤次数,
+       s.leave_count AS 请假次数
+FROM students s
+WHERE s.student_number = '120231140328';
+
+================================================================
+
+【文件说明】
+
+pom.xml                    - Maven配置
+出勤统计.csv                - 原始数据
+src/main/java/             - Java源代码
+src/main/resources/        - 配置文件
+data/query.sql             - SQL查询脚本
+README.md                  - 详细说明文档
+NetBeans数据库查看指南.md   - NetBeans使用指南
+
+================================================================
+
+【数据库表结构】
+
+1. students (学生信息表)
+   - id: 主键，自增
+   - student_name: 学生姓名
+   - student_number: 学号（唯一）
+   - total_attendance: 正常出勤次数
+   - leave_count: 请假次数
+
+2. attendance_records (出勤记录表)
+   - id: 主键，自增
+   - student_id: 外键，关联students表
+   - session_number: 出勤次数编号
+   - attendance_status: 出勤状态（出勤/缺勤/请假）
+
+================================================================
+
+【故障排除】
+
+1. 编译失败
+   - 确保安装Java 17+
+   - 确保安装Maven
+
+2. 数据库连接失败
+   - 确保程序已运行
+   - 检查attendance_db.mv.db是否存在
+
+3. CSV读取失败
+   - 确保文件编码UTF-8
+   - 确保文件在项目根目录
+
+================================================================
+
+【联系方式】
+如有问题，请查看README.md或NetBeans数据库查看指南.md
+
+================================================================

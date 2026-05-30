@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>函数图像实时显示器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f6fa;
+            color: #2c3e50;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 左侧面板 */
+        .sidebar {
+            width: 360px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        /* 右侧画布区 */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        canvas {
+            flex: 1;
+            cursor: crosshair;
+        }
+
+        .coord-bar {
+            height: 32px;
+            background: #f0f0f0;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 标题 */
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 12px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            margin-bottom: 16px;
+        }
+
+        /* 顶部按钮栏 */
+        .top-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .top-bar button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-help {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-help:hover {
+            background: #2980b9;
+        }
+
+        .btn-clear {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #c0392b;
+        }
+
+        /* 缩放按钮 */
+        .zoom-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .zoom-bar button {
+            padding: 6px 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .zoom-bar button:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .zoom-hint {
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* 区块标题 */
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 16px 0 8px;
+            color: #34495e;
+        }
+
+        /* 预设按钮 */
+        .presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .presets button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .presets button:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* 输入区 */
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .input-row button {
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .input-row button:hover {
+            background: #2ecc71;
+        }
+
+        .input-row label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-top: 6px;
+        }
+
+        /* 函数列表 */
+        .func-list {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .func-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            gap: 8px;
+        }
+
+        .func-item:last-child {
+            border-bottom: none;
+        }
+
+        .func-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .func-expr {
+            flex: 1;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .func-item button {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .func-item button:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .func-item .btn-del {
+            color: red;
+            border-color: red;
+        }
+
+        .func-item .btn-del:hover {
+            background: red;
+            color: white;
+        }
+
+        /* 参数滑块 */
+        .param-group {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .param-header {
+            font-weight: bold;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 8px;
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .param-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .param-row label {
+            width: 40px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .param-row input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .param-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .param-row input[type="range"]::-webkit-slider-thumb:hover {
+            background: #2980b9;
+        }
+
+        .param-row input[type="number"] {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* 分析按钮 */
+        .analysis-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 6px;
+            margin: 16px 0;
+        }
+
+        .analysis-bar button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .analysis-bar button:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* X轴范围 */
+        .range-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 16px 0;
+        }
+
+        .range-group label {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .range-group input {
+            width: 70px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* 右键菜单 */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 4px;
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .context-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .context-menu button:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .context-menu .disabled {
+            color: #999;
+            cursor: default;
+        }
+
+        .context-menu .disabled:hover {
+            background: none;
+            color: #999;
+        }
+
+        .context-menu hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 4px 0;
+        }
+
+        /* 帮助弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .modal h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .modal h3 {
+            color: #3498db;
+            margin: 16px 0 8px;
+        }
+
+        .modal table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+        }
+
+        .modal th, .modal td {
+            border: 1px solid #ddd;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .modal th {
+            background: #ecf0f1;
+        }
+
+        .modal ul, .modal ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        .modal li {
+            margin: 4px 0;
+        }
+
+        .modal .close-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal .close-btn:hover {
+            background: #2980b9;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* 关键点信息提示框 */
+        .point-tooltip {
+            position: fixed;
+            background: rgba(44, 62, 80, 0.95);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 280px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .point-tooltip .tooltip-title {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .point-tooltip .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .point-tooltip .tooltip-label {
+            color: #aaa;
+        }
+
+        .point-tooltip .tooltip-value {
+            font-family: Consolas, monospace;
+            font-weight: bold;
+        }
+
+        .point-tooltip .tooltip-color {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        /* 函数选择器 */
+        .func-category-btn {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .func-category-btn:hover, .func-category-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .func-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .func-card:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+
+        .func-card-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .func-card-expr {
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            color: #3498db;
+            margin-bottom: 4px;
+        }
+
+        .func-card-desc {
+            font-size: 11px;
+            color: #777;
+        }
+
+        .func-card-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            background: #ecf0f1;
+            color: #666;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- 左侧面板 -->
+        <div class="sidebar">
+            <div class="title">函数图像实时显示器</div>
+
+            <!-- 顶部按钮 -->
+            <div class="top-bar">
+                <button class="btn-help" onclick="showHelp()">帮助</button>
+                <button class="btn-clear" onclick="clearAll()">全部清除</button>
+            </div>
+
+            <!-- 缩放按钮 -->
+            <div class="zoom-bar">
+                <button onclick="zoomIn()">放大</button>
+                <button onclick="zoomOut()">缩小</button>
+                <button onclick="resetView()">重置</button>
+                <span class="zoom-hint">滚轮可缩放</span>
+            </div>
+
+            <!-- 快速添加 -->
+            <div class="section-title">快速添加</div>
+            <div class="presets" id="presets"></div>
+
+            <!-- 自定义输入 -->
+            <div class="section-title">自定义输入</div>
+            <div class="input-group">
+                <input type="text" id="exprInput" placeholder="输入函数表达式，如: a*x^2+b"
+                       onkeypress="if(event.key==='Enter') addFunction()">
+                <div class="input-row">
+                    <button onclick="addFunction()">添加函数</button>
+                    <label>
+                        <input type="checkbox" id="nlMode"> 自然语言
+                    </label>
+                </div>
+                <div class="hint">支持 sin cos tan log sqrt abs exp 等函数</div>
+            </div>
+
+            <!-- 函数列表 -->
+            <div class="section-title">当前函数 (<span id="funcCount">0</span>个)</div>
+            <div class="func-list" id="funcList">
+                <div class="empty-state">
+                    <div class="icon">📈</div>
+                    <div>请添加函数开始绘图</div>
+                </div>
+            </div>
+
+            <!-- 参数调节 -->
+            <div class="section-title">参数调节</div>
+            <div id="paramArea"></div>
+
+            <!-- 分析按钮 -->
+            <div class="section-title">图像分析</div>
+            <div class="analysis-bar">
+                <button onclick="findIntersections()">求交点</button>
+                <button onclick="findExtrema()">求极值</button>
+                <button onclick="findRoots()">求零点</button>
+                <button onclick="clearAnnotations()">清除</button>
+            </div>
+
+            <!-- X轴范围 -->
+            <div class="section-title">X 轴范围</div>
+            <div class="range-group">
+                <label>最小值:</label>
+                <input type="number" id="xMin" value="-10" step="1" onchange="plot()">
+                <label>最大值:</label>
+                <input type="number" id="xMax" value="10" step="1" onchange="plot()">
+            </div>
+        </div>
+
+        <!-- 右侧画布区 -->
+        <div class="main">
+            <canvas id="canvas"></canvas>
+            <div class="coord-bar" id="coordBar">坐标: x = 0.0000, y = 0.0000</div>
+        </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu" style="display:none;">
+        <button class="disabled" id="menuInfo">函数值: f(x) = y</button>
+        <button class="disabled" id="menuDeriv">导数值: f'(x) = y'</button>
+        <hr>
+        <button id="menuCopy" onclick="copyCoord()">复制坐标</button>
+        <button onclick="saveImage()">保存图片</button>
+        <button onclick="resetView()">重置视图</button>
+    </div>
+
+    <!-- 关键点信息提示框 -->
+    <div class="point-tooltip" id="pointTooltip">
+        <div class="tooltip-title" id="tooltipTitle">关键点信息</div>
+        <div id="tooltipContent"></div>
+    </div>
+
+    <!-- 函数选择器弹窗 -->
+    <div class="modal-overlay" id="funcSelectorModal" style="display:none;" onclick="if(event.target===this)closeFuncSelector()">
+        <div class="modal" style="width:800px;">
+            <h2>选择函数</h2>
+            <div style="margin-bottom:12px;">
+                <input type="text" id="funcSearchInput" placeholder="搜索函数..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;" oninput="filterDomainFunctions()">
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" id="categoryFilters"></div>
+            <div id="funcSelectorList" style="max-height:400px;overflow-y:auto;"></div>
+            <button class="close-btn" onclick="closeFuncSelector()">取消</button>
+        </div>
+    </div>
+
+    <!-- 帮助弹窗 -->
+    <div class="modal-overlay" id="helpModal" style="display:none;" onclick="if(event.target===this)hideHelp()">
+        <div class="modal">
+            <h2>函数图像实时显示器 - 使用帮助</h2>
+
+            <h3>一、快速入门</h3>
+            <ol>
+                <li><b>添加函数</b>：点击<b>快速添加</b>按钮（如 sin、cos、x²），函数立即显示在图像上</li>
+                <li><b>自定义输入</b>：在输入框中输入函数表达式，按回车或点击"添加函数"</li>
+                <li><b>调节参数</b>：如果函数含有参数，会自动出现滑块，拖动即可实时看到图像变化</li>
+            </ol>
+
+            <h3>二、支持的函数</h3>
+            <table>
+                <tr><th>函数名</th><th>说明</th><th>示例</th></tr>
+                <tr><td>sin(x)</td><td>正弦函数</td><td>sin(x)</td></tr>
+                <tr><td>cos(x)</td><td>余弦函数</td><td>cos(x)</td></tr>
+                <tr><td>tan(x)</td><td>正切函数</td><td>tan(x)</td></tr>
+                <tr><td>asin(x)</td><td>反正弦函数</td><td>asin(x)</td></tr>
+                <tr><td>acos(x)</td><td>反余弦函数</td><td>acos(x)</td></tr>
+                <tr><td>atan(x)</td><td>反正切函数</td><td>atan(x)</td></tr>
+                <tr><td>log(x)</td><td>自然对数</td><td>log(x)</td></tr>
+                <tr><td>sqrt(x)</td><td>平方根</td><td>sqrt(x)</td></tr>
+                <tr><td>abs(x)</td><td>绝对值</td><td>abs(x)</td></tr>
+                <tr><td>exp(x)</td><td>指数函数</td><td>exp(x)</td></tr>
+            </table>
+            <p><b>常量</b>：pi (π)、e (自然常数)</p>
+            <p><b>运算符</b>：+ - * / ^ (幂运算)</p>
+
+            <h3>三、自然语言输入</h3>
+            <p>勾选<b>"自然语言"</b>后，可以用中文输入：</p>
+            <ul>
+                <li>"x的平方" → x**2</li>
+                <li>"正弦" → sin(x)</li>
+                <li>"平方根" → sqrt(x)</li>
+                <li>"绝对值" → abs(x)</li>
+            </ul>
+            <p><b>领域函数</b>：输入中文描述，自动匹配各领域函数：</p>
+            <ul>
+                <li><b>数学</b>：二次函数、正态分布、幂函数...</li>
+                <li><b>物理</b>：自由落体、简谐振动、放射性衰变...</li>
+                <li><b>经济</b>：需求曲线、复利增长、效用函数...</li>
+                <li><b>生物</b>：种群增长、酶促反应、细菌生长...</li>
+                <li><b>化学</b>：一级反应、Arrhenius方程...</li>
+                <li><b>工程</b>：RC电路、振动衰减、信号衰减...</li>
+                <li><b>医学</b>：药物剂量-反应、生存曲线...</li>
+            </ul>
+
+            <h3>四、图像操作</h3>
+            <ul>
+                <li><b>缩放</b>：鼠标滚轮，或点击放大/缩小按钮</li>
+                <li><b>平移</b>：按住鼠标左键拖动</li>
+                <li><b>重置</b>：点击重置按钮</li>
+            </ul>
+
+            <h3>五、右键菜单</h3>
+            <p>在图像上<b>右键点击</b>：</p>
+            <ul>
+                <li>查看函数值和导数值</li>
+                <li>复制坐标</li>
+                <li>保存图片</li>
+                <li>重置视图</li>
+            </ul>
+
+            <h3>六、常见问题</h3>
+            <p><b>Q: 函数没有显示？</b> 检查表达式是否正确，使用英文括号。</p>
+            <p><b>Q: 如何显示参数滑块？</b> 使用除 x 外的字母，如 a*x+b。</p>
+            <p><b>Q: 如何保存图像？</b> 右键选择"保存图片"。</p>
+
+            <button class="close-btn" onclick="hideHelp()">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        // ========== 颜色和预设 ==========
+        const COLORS = [
+            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+            "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+        ];
+
+        const PRESETS = [
+            { label: "sin(x)", expr: "sin(x)" },
+            { label: "cos(x)", expr: "cos(x)" },
+            { label: "tan(x)", expr: "tan(x)" },
+            { label: "asin(x)", expr: "asin(x)" },
+            { label: "acos(x)", expr: "acos(x)" },
+            { label: "atan(x)", expr: "atan(x)" },
+            { label: "x²", expr: "x^2" },
+            { label: "x³", expr: "x^3" },
+            { label: "√x", expr: "sqrt(x)" },
+            { label: "1/x", expr: "1/x" },
+            { label: "eˣ", expr: "exp(x)" },
+            { label: "ln(x)", expr: "log(x)" },
+            { label: "|x|", expr: "abs(x)" }
+        ];
+
+        const NL_PATTERNS = [
+            [/x的平方/g, "x**2"],
+            [/x的立方/g, "x**3"],
+            [/(\w+)的平方/g, "($1)**2"],
+            [/(\w+)的立方/g, "($1)**3"],
+            [/正弦/g, "sin(x)"],
+            [/余弦/g, "cos(x)"],
+            [/正切/g, "tan(x)"],
+            [/平方根/g, "sqrt(x)"],
+            [/绝对值/g, "abs(x)"],
+            [/自然对数/g, "log(x)"],
+            [/(\d+)倍的x/g, "$1*x"],
+            [/x加(\d+)/g, "x+$1"],
+            [/x减(\d+)/g, "x-$1"]
+        ];
+
+        // ========== 领域函数数据库 ==========
+        const DOMAIN_FUNCTIONS = [
+            // === 数学基础 ===
+            { name: "二次函数", expr: "a*x^2 + b*x + c", params: {a: 1, b: 0, c: 0}, category: "数学基础", desc: "抛物线，开口方向由a决定" },
+            { name: "三次函数", expr: "a*x^3 + b*x + c", params: {a: 1, b: 0, c: 0}, category: "数学基础", desc: "三次曲线" },
+            { name: "反比例函数", expr: "a/x", params: {a: 1}, category: "数学基础", desc: "双曲线" },
+            { name: "指数函数", expr: "a * exp(b*x)", params: {a: 1, b: 1}, category: "数学基础", desc: "指数增长或衰减" },
+            { name: "对数函数", expr: "a * log(b*x)", params: {a: 1, b: 1}, category: "数学基础", desc: "对数曲线" },
+            { name: "幂函数", expr: "x^a", params: {a: 2}, category: "数学基础", desc: "幂次曲线" },
+            { name: "正态分布", expr: "exp(-((x-a)^2)/(2*b^2)) / (b*sqrt(2*pi))", params: {a: 0, b: 1}, category: "数学基础", desc: "高斯钟形曲线" },
+
+            // === 物理学 ===
+            { name: "自由落体", expr: "a - 0.5*g*x^2", params: {a: 10, g: 9.8}, category: "物理学", desc: "h = h0 - 1/2*g*t^2" },
+            { name: "匀速直线运动", expr: "v0*x + s0", params: {v0: 1, s0: 0}, category: "物理学", desc: "s = v*t + s0" },
+            { name: "匀加速运动", expr: "0.5*a*x^2 + v0*x + s0", params: {a: 2, v0: 0, s0: 0}, category: "物理学", desc: "s = 1/2*a*t^2 + v0*t + s0" },
+            { name: "简谐振动", expr: "A * sin(w*x + phi)", params: {A: 1, w: 1, phi: 0}, category: "物理学", desc: "x = A*sin(ωt+φ)" },
+            { name: "阻尼振动", expr: "A * exp(-b*x) * sin(w*x)", params: {A: 1, b: 0.3, w: 3}, category: "物理学", desc: "振幅随时间衰减" },
+            { name: "弹簧弹力", expr: "-k*x", params: {k: 1}, category: "物理学", desc: "F = -k*x (胡克定律)" },
+            { name: "万有引力", expr: "G*M*m/(x^2)", params: {G: 1, M: 1, m: 1}, category: "物理学", desc: "F = GMm/r²" },
+            { name: "库仑力", expr: "k*q1*q2/(x^2)", params: {k: 1, q1: 1, q2: 1}, category: "物理学", desc: "F = kq1q2/r²" },
+            { name: "电容器充电", expr: "V*(1-exp(-x/(R*C)))", params: {V: 5, R: 1, C: 1}, category: "物理学", desc: "V = V0(1-e^(-t/RC))" },
+            { name: "放射性衰变", expr: "N0 * exp(-lambda*x)", params: {N0: 100, lambda: 0.1}, category: "物理学", desc: "N = N0*e^(-λt)" },
+
+            // === 经济学 ===
+            { name: "需求曲线", expr: "a - b*x", params: {a: 100, b: 2}, category: "经济学", desc: "价格越高，需求量越低" },
+            { name: "供给曲线", expr: "c + d*x", params: {c: 10, d: 3}, category: "经济学", desc: "价格越高，供给量越高" },
+            { name: "供需均衡", expr: ["a - b*x", "c + d*x"], params: [{a: 100, b: 2}, {c: 10, d: 3}], category: "经济学", desc: "供需曲线交点为均衡点", multi: true },
+            { name: "边际成本", expr: "a + 2*b*x", params: {a: 10, b: 1}, category: "经济学", desc: "MC = d(TC)/dQ" },
+            { name: "边际收益", expr: "a - 2*b*x", params: {a: 100, b: 1}, category: "经济学", desc: "MR = d(TR)/dQ" },
+            { name: "复利增长", expr: "P * (1 + r)^x", params: {P: 1000, r: 0.05}, category: "经济学", desc: "A = P(1+r)^n" },
+            { name: "连续复利", expr: "P * exp(r*x)", params: {P: 1000, r: 0.05}, category: "经济学", desc: "A = P*e^(rt)" },
+            { name: "折旧曲线", expr: "V0 * (1 - d)^x", params: {V0: 10000, d: 0.1}, category: "经济学", desc: "资产价值随时间递减" },
+            { name: "效用函数", expr: "a * log(x + 1)", params: {a: 10}, category: "经济学", desc: "边际效用递减" },
+            { name: "科布-道格拉斯", expr: "A * x1^a * x2^b", params: {A: 1, a: 0.5, b: 0.5}, category: "经济学", desc: "Y = A*K^α*L^β" },
+
+            // === 生物学 ===
+            { name: "种群增长(指数)", expr: "N0 * exp(r*x)", params: {N0: 100, r: 0.5}, category: "生物学", desc: "N = N0*e^(rt)" },
+            { name: "种群增长(Logistic)", expr: "K / (1 + ((K - N0)/N0) * exp(-r*x))", params: {K: 1000, N0: 10, r: 0.5}, category: "生物学", desc: "S形增长曲线，有环境容纳量K" },
+            { name: "酶促反应(Michaelis)", expr: "Vmax * x / (Km + x)", params: {Vmax: 10, Km: 1}, category: "生物学", desc: "v = Vmax*[S]/(Km+[S])" },
+            { name: "药物代谢", expr: "C0 * exp(-k*x)", params: {C0: 100, k: 0.1}, category: "生物学", desc: "血药浓度随时间衰减" },
+            { name: "Hill方程", expr: "Vmax * x^n / (K^n + x^n)", params: {Vmax: 10, K: 1, n: 2}, category: "生物学", desc: "描述协同效应" },
+            { name: "Lotka-Volterra(猎物)", expr: "a*x - b*x*y", params: {a: 1, b: 0.1}, category: "生物学", desc: "捕食者-猎物模型(猎物)" },
+            { name: "细菌生长", expr: "N0 * 2^(x/Td)", params: {N0: 100, Td: 2}, category: "生物学", desc: "N = N0*2^(t/Td)" },
+            { name: "光合作用光响应", expr: "Pmax * (1 - exp(-alpha * x / Pmax))", params: {Pmax: 20, alpha: 0.5}, category: "生物学", desc: "光合速率与光照强度关系" },
+
+            // === 化学 ===
+            { name: "一级反应", expr: "C0 * exp(-k*x)", params: {C0: 1, k: 0.1}, category: "化学", desc: "ln(C) = ln(C0) - kt" },
+            { name: "二级反应", expr: "C0 / (1 + k*C0*x)", params: {C0: 1, k: 0.5}, category: "化学", desc: "1/C = 1/C0 + kt" },
+            { name: "Arrhenius方程", expr: "A * exp(-Ea/(R*x))", params: {A: 1e10, Ea: 50000, R: 8.314}, category: "化学", desc: "k = A*e^(-Ea/RT)" },
+            { name: "缓冲溶液pH", expr: "pKa + log(x/(C-x))", params: {pKa: 7.4, C: 1}, category: "化学", desc: "Henderson-Hasselbalch方程" },
+
+            // === 工程学 ===
+            { name: "RC电路放电", expr: "V0 * exp(-x/(R*C))", params: {V0: 5, R: 1000, C: 0.001}, category: "工程学", desc: "V = V0*e^(-t/RC)" },
+            { name: "RL电路", expr: "I0 * (1 - exp(-R*x/L))", params: {I0: 1, R: 10, L: 1}, category: "工程学", desc: "i = I0(1-e^(-Rt/L))" },
+            { name: "振动衰减", expr: "A * exp(-zeta*w*x) * sin(w*sqrt(1-zeta^2)*x)", params: {A: 1, zeta: 0.2, w: 5}, category: "工程学", desc: "欠阻尼振动" },
+            { name: "热传导(稳态)", expr: "T1 + (T2-T1)*x/L", params: {T1: 100, T2: 20, L: 10}, category: "工程学", desc: "温度沿长度线性分布" },
+            { name: "信号衰减", expr: "A * exp(-alpha*x) * cos(beta*x)", params: {A: 1, alpha: 0.1, beta: 3}, category: "工程学", desc: "衰减振荡信号" },
+
+            // === 人口/社会学 ===
+            { name: "人口增长(Malthus)", expr: "P0 * exp(r*x)", params: {P0: 1000, r: 0.02}, category: "人口学", desc: "指数增长模型" },
+            { name: "人口增长(Logistic)", expr: "K / (1 + ((K-P0)/P0) * exp(-r*x))", params: {K: 10000, P0: 100, r: 0.03}, category: "人口学", desc: "有环境限制的增长" },
+            { name: "学习曲线", expr: "a - b * exp(-c*x)", params: {a: 100, b: 80, c: 0.1}, category: "社会学", desc: "学习效率随时间提高" },
+            { name: "技术扩散(S型)", expr: "K / (1 + exp(-a*(x-b)))", params: {K: 100, a: 0.5, b: 5}, category: "社会学", desc: "S形扩散曲线" },
+
+            // === 医学 ===
+            { name: "药物剂量-反应", expr: "Emax * x / (EC50 + x)", params: {Emax: 100, EC50: 5}, category: "医学", desc: "Hill方程(n=1)" },
+            { name: "生存曲线", expr: "exp(-lambda * x^alpha)", params: {lambda: 0.1, alpha: 1}, category: "医学", desc: "Weibull生存函数" },
+            { name: "传染病传播(SIR-S)", expr: "1 / (1 + ((N-1)/1) * exp(-beta*N*x/N))", params: {N: 1000, beta: 0.3}, category: "医学", desc: "易感人群变化" },
+
+            // === 地理/气象 ===
+            { name: "大气压随高度", expr: "P0 * exp(-x/H)", params: {P0: 101325, H: 8500}, category: "气象学", desc: "P = P0*e^(-h/H)" },
+            { name: "温度随高度", expr: "T0 - L*x", params: {T0: 288, L: 0.0065}, category: "气象学", desc: "对流层温度递减" },
+            { name: "潮汐曲线", expr: "A * sin(2*pi*x/T) + B", params: {A: 2, T: 12.4, B: 0}, category: "地理学", desc: "半日潮模型" },
+        ];
+
+        // 搜索关键词映射
+        const SEARCH_KEYWORDS = {
+            "数学": ["数学", "二次", "三次", "抛物线", "双曲线", "幂", "对数", "正态", "高斯"],
+            "物理": ["物理", "自由落体", "运动", "振动", "弹簧", "引力", "库仑", "电容", "放射", "衰变"],
+            "经济": ["经济", "需求", "供给", "均衡", "成本", "收益", "复利", "折旧", "效用", "科布"],
+            "生物": ["生物", "种群", "logistic", "酶", "药物", "代谢", "细菌", "光合", "Hill", "捕食"],
+            "化学": ["化学", "反应", "一级", "二级", "arrhenius", "缓冲", "pH"],
+            "工程": ["工程", "电路", "RC", "RL", "衰减", "热传导", "信号"],
+            "人口": ["人口", "malthus", "扩散", "学习", "社会"],
+            "医学": ["医学", "剂量", "生存", "传染", "病"],
+            "地理": ["地理", "气象", "大气", "温度", "潮汐", "海拔"]
+        };
+
+        // ========== 状态 ==========
+        let functions = [];
+        let annotations = [];
+        let nextId = 0;
+        let viewXMin = -10, viewXMax = 10;
+        let viewYMin = -5, viewYMax = 5;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let mouseX = 0, mouseY = 0;
+        let mouseCanvasX = 0, mouseCanvasY = 0;
+
+        // ========== Canvas 设置 ==========
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            updateViewFromRange();
+            plot();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // ========== 数学表达式解析 ==========
+        function safeEval(expr, vars = {}) {
+            let processed = expr.replace(/\^/g, '**');
+
+            const funcs = {
+                sin: Math.sin, cos: Math.cos, tan: Math.tan,
+                asin: Math.asin, acos: Math.acos, atan: Math.atan,
+                log: Math.log, log2: Math.log2, log10: Math.log10,
+                exp: Math.exp, sqrt: Math.sqrt, abs: Math.abs,
+                ceil: Math.ceil, floor: Math.floor
+            };
+
+            const consts = { pi: Math.PI, e: Math.E };
+
+            const scope = { ...consts, ...vars };
+            for (let [k, v] of Object.entries(funcs)) {
+                scope[k] = v;
+            }
+
+            const keys = Object.keys(scope);
+            const values = Object.values(scope);
+
+            try {
+                const fn = new Function(...keys, `return ${processed};`);
+                return fn(...values);
+            } catch {
+                return NaN;
+            }
+        }
+
+        function extractParams(expr) {
+            const reserved = new Set(["sin","cos","tan","asin","acos","atan",
+                "log","log2","log10","exp","sqrt","abs","ceil","floor","pi","e","x"]);
+            const matches = expr.match(/[a-zA-Z_]\w*/g) || [];
+            return [...new Set(matches)].filter(m => !reserved.has(m)).sort();
+        }
+
+        function translateNL(text) {
+            let result = text;
+            for (let [pattern, replacement] of NL_PATTERNS) {
+                let newResult = result.replace(pattern, replacement);
+                if (newResult !== result) return newResult;
+            }
+            return result;
+        }
+
+        function searchDomainFunctions(text) {
+            // 如果输入看起来是标准数学表达式，不进行领域搜索
+            const mathPattern = /[a-zA-Z]+\(|[\+\-\*\/\^\(\)]|\d+\.\d|\.\d+/;
+            if (mathPattern.test(text)) {
+                return [];
+            }
+
+            // 如果全是英文/数字/运算符，不搜索
+            if (/^[a-zA-Z0-9+\-*/^().\s]+$/.test(text)) {
+                return [];
+            }
+
+            const results = [];
+
+            DOMAIN_FUNCTIONS.forEach(func => {
+                let score = 0;
+
+                // 精确匹配名称
+                if (func.name.includes(text)) score += 10;
+
+                // 匹配描述
+                if (func.desc.includes(text)) score += 5;
+
+                // 匹配类别
+                if (func.category.includes(text)) score += 3;
+
+                // 匹配关键词
+                for (let [category, keywords] of Object.entries(SEARCH_KEYWORDS)) {
+                    if (keywords.some(kw => text.includes(kw))) {
+                        if (func.category.includes(category) || func.name.includes(category)) {
+                            score += 4;
+                        }
+                    }
+                }
+
+                if (score > 0) {
+                    results.push({ ...func, score });
+                }
+            });
+
+            return results.sort((a, b) => b.score - a.score);
+        }
+
+        let currentCategoryFilter = 'all';
+        let selectedSearchResults = [];
+
+        function openFuncSelector(searchText) {
+            selectedSearchResults = searchDomainFunctions(searchText);
+            currentCategoryFilter = 'all';
+
+            // 获取所有类别
+            const categories = [...new Set(selectedSearchResults.map(f => f.category))];
+            const filtersEl = document.getElementById('categoryFilters');
+            filtersEl.innerHTML = `<button class="func-category-btn active" onclick="filterByCategory('all', this)">全部</button>` +
+                categories.map(cat => `<button class="func-category-btn" onclick="filterByCategory('${cat}', this)">${cat}</button>`).join('');
+
+            filterDomainFunctions();
+            document.getElementById('funcSelectorModal').style.display = 'flex';
+            document.getElementById('funcSearchInput').value = searchText;
+        }
+
+        function filterByCategory(category, btn) {
+            currentCategoryFilter = category;
+            document.querySelectorAll('.func-category-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            filterDomainFunctions();
+        }
+
+        function filterDomainFunctions() {
+            const searchText = document.getElementById('funcSearchInput').value;
+            let results = selectedSearchResults.length > 0 ? selectedSearchResults : searchDomainFunctions(searchText);
+
+            if (currentCategoryFilter !== 'all') {
+                results = results.filter(f => f.category === currentCategoryFilter);
+            }
+
+            const listEl = document.getElementById('funcSelectorList');
+            if (results.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">未找到匹配的函数</div>';
+            } else {
+                listEl.innerHTML = results.map((func, i) => {
+                    if (func.multi) {
+                        return `
+                            <div class="func-card" onclick="selectMultiFunction(${i})">
+                                <div class="func-card-name">
+                                    ${func.name}
+                                    <span class="func-card-category">${func.category}</span>
+                                </div>
+                                <div class="func-card-expr">${func.expr[0]}<br>${func.expr[1]}</div>
+                                <div class="func-card-desc">${func.desc}</div>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="func-card" onclick="selectDomainFunction(${i})">
+                            <div class="func-card-name">
+                                ${func.name}
+                                <span class="func-card-category">${func.category}</span>
+                            </div>
+                            <div class="func-card-expr">${func.expr}</div>
+                            <div class="func-card-desc">${func.desc}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function selectDomainFunction(index) {
+            const func = selectedSearchResults[index];
+            if (!func) return;
+
+            if (func.params && typeof func.params === 'object' && !Array.isArray(func.params)) {
+                addFunction(func.expr, { ...func.params });
+            } else {
+                addFunction(func.expr);
+            }
+            closeFuncSelector();
+        }
+
+        function selectMultiFunction(index) {
+            const func = selectedSearchResults[index];
+            if (!func || !func.multi) return;
+
+            func.expr.forEach((expr, i) => {
+                const params = func.params[i] || {};
+                addFunction(expr, { ...params });
+            });
+            closeFuncSelector();
+        }
+
+        function closeFuncSelector() {
+            document.getElementById('funcSelectorModal').style.display = 'none';
+        }
+
+        // ========== 函数管理 ==========
+        function addFunction(expr, params = null) {
+            // 如果没有传参数，从输入框读取
+            if (!expr || typeof expr !== 'string') {
+                expr = document.getElementById('exprInput').value.trim();
+                if (!expr) return;
+            }
+
+            if (document.getElementById('nlMode').checked) {
+                // 先尝试简单翻译
+                const translated = translateNL(expr);
+
+                // 如果简单翻译没有结果，搜索领域函数数据库
+                if (translated === expr) {
+                    const results = searchDomainFunctions(expr);
+                    if (results.length > 0) {
+                        openFuncSelector(expr);
+                        return;
+                    }
+                } else {
+                    document.getElementById('exprInput').value = translated;
+                    expr = translated;
+                }
+            }
+
+            const funcId = nextId++;
+            const color = COLORS[funcId % COLORS.length];
+
+            if (!params) {
+                const paramNames = extractParams(expr);
+                params = {};
+                paramNames.forEach(name => params[name] = 1.0);
+            }
+
+            functions.push({
+                id: funcId,
+                expr: expr,
+                params: params,
+                color: color,
+                visible: true
+            });
+
+            document.getElementById('exprInput').value = '';
+            updateUI();
+            plot();
+        }
+
+        function removeFunction(id) {
+            functions = functions.filter(f => f.id !== id);
+            updateUI();
+            plot();
+        }
+
+        function toggleVisibility(id) {
+            const func = functions.find(f => f.id === id);
+            if (func) {
+                func.visible = !func.visible;
+                updateUI();
+                plot();
+            }
+        }
+
+        function clearAll() {
+            if (confirm('确定要清除所有函数吗？')) {
+                functions = [];
+                annotations = [];
+                updateUI();
+                plot();
+            }
+        }
+
+        // ========== UI 更新 ==========
+        function updateUI() {
+            // 更新函数列表
+            const listEl = document.getElementById('funcList');
+            const countEl = document.getElementById('funcCount');
+            countEl.textContent = functions.length;
+
+            if (functions.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📈</div>
+                        <div>请添加函数开始绘图</div>
+                    </div>`;
+            } else {
+                listEl.innerHTML = functions.map(f => `
+                    <div class="func-item">
+                        <div class="func-color" style="background:${f.color}"></div>
+                        <div class="func-expr">${f.expr}</div>
+                        <button onclick="toggleVisibility(${f.id})">${f.visible ? '隐藏' : '显示'}</button>
+                        <button class="btn-del" onclick="removeFunction(${f.id})">×</button>
+                    </div>
+                `).join('');
+            }
+
+            // 更新参数区域
+            const paramEl = document.getElementById('paramArea');
+            const visibleFuncs = functions.filter(f => f.visible);
+            const funcsWithParams = visibleFuncs.filter(f => Object.keys(f.params).length > 0);
+
+            if (funcsWithParams.length === 0) {
+                paramEl.innerHTML = '<div style="color:#999;font-size:12px;">无参数</div>';
+            } else {
+                paramEl.innerHTML = funcsWithParams.map(f => {
+                    const sliders = Object.entries(f.params).map(([name, val]) => `
+                        <div class="param-row">
+                            <label>${name} =</label>
+                            <input type="range" min="-10" max="10" step="0.1" value="${val}"
+                                   oninput="updateParam(${f.id},'${name}',this.value)">
+                            <input type="number" min="-10" max="10" step="0.1" value="${val}"
+                                   onchange="updateParam(${f.id},'${name}',this.value)">
+                        </div>
+                    `).join('');
+                    return `
+                        <div class="param-group">
+                            <div class="param-header">${f.expr}</div>
+                            ${sliders}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function updateParam(funcId, name, value) {
+            const func = functions.find(f => f.id === funcId);
+            if (func) {
+                func.params[name] = parseFloat(value);
+                // 同步滑块和输入框
+                document.querySelectorAll(`.param-row`).forEach(row => {
+                    const label = row.querySelector('label');
+                    if (label && label.textContent.trim() === `${name} =`) {
+                        row.querySelector('input[type="range"]').value = value;
+                        row.querySelector('input[type="number"]').value = value;
+                    }
+                });
+                plot();
+            }
+        }
+
+        // ========== 坐标转换 ==========
+        function dataToCanvas(x, y) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 40;
+            const plotW = w - padding * 2;
+            const plotH = h - padding * 2;
+
+            const cx = padding + (x - viewXMin) / (viewXMax - viewXMin) * plotW;
+            const cy = padding + (viewYMax - y) / (viewYMax - viewYMin) * plotH;
+            return [cx, cy];
+        }
+
+        function canvasToData(cx, cy) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 40;
+            const plotW = w - padding * 2;
+            const plotH = h - padding * 2;
+
+            const x = viewXMin + (cx - padding) / plotW * (viewXMax - viewXMin);
+            const y = viewYMax - (cy - padding) / plotH * (viewYMax - viewYMin);
+            return [x, y];
+        }
+
+        // ========== 绘图 ==========
+        function plot() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 40;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 背景
+            ctx.fillStyle = '#fafafa';
+            ctx.fillRect(padding, padding, w - padding * 2, h - padding * 2);
+
+            // 网格
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+
+            const xStep = getGridStep(viewXMax - viewXMin);
+            const yStep = getGridStep(viewYMax - viewYMin);
+
+            for (let x = Math.ceil(viewXMin / xStep) * xStep; x <= viewXMax; x += xStep) {
+                const [cx] = dataToCanvas(x, 0);
+                ctx.beginPath();
+                ctx.moveTo(cx, padding);
+                ctx.lineTo(cx, h - padding);
+                ctx.stroke();
+            }
+
+            for (let y = Math.ceil(viewYMin / yStep) * yStep; y <= viewYMax; y += yStep) {
+                const [, cy] = dataToCanvas(0, y);
+                ctx.beginPath();
+                ctx.moveTo(padding, cy);
+                ctx.lineTo(w - padding, cy);
+                ctx.stroke();
+            }
+
+            ctx.setLineDash([]);
+
+            // 坐标轴
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1.5;
+
+            // X轴
+            const [, yAxis] = dataToCanvas(0, 0);
+            if (yAxis >= padding && yAxis <= h - padding) {
+                ctx.beginPath();
+                ctx.moveTo(padding, yAxis);
+                ctx.lineTo(w - padding, yAxis);
+                ctx.stroke();
+            }
+
+            // Y轴
+            const [xAxis] = dataToCanvas(0, 0);
+            if (xAxis >= padding && xAxis <= w - padding) {
+                ctx.beginPath();
+                ctx.moveTo(xAxis, padding);
+                ctx.lineTo(xAxis, h - padding);
+                ctx.stroke();
+            }
+
+            // 刻度标签
+            ctx.fillStyle = '#666';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+
+            for (let x = Math.ceil(viewXMin / xStep) * xStep; x <= viewXMax; x += xStep) {
+                if (Math.abs(x) < 0.0001) continue;
+                const [cx] = dataToCanvas(x, 0);
+                const labelY = Math.min(Math.max(yAxis + 15, padding + 15), h - padding - 5);
+                ctx.fillText(x.toFixed(1), cx, labelY);
+            }
+
+            ctx.textAlign = 'right';
+            for (let y = Math.ceil(viewYMin / yStep) * yStep; y <= viewYMax; y += yStep) {
+                if (Math.abs(y) < 0.0001) continue;
+                const [, cy] = dataToCanvas(0, y);
+                const labelX = Math.min(Math.max(xAxis - 8, padding + 5), w - padding - 5);
+                ctx.fillText(y.toFixed(1), labelX, cy + 4);
+            }
+
+            // 绘制函数曲线
+            const numPoints = 1000;
+            const xRange = viewXMax - viewXMin;
+
+            functions.forEach(func => {
+                if (!func.visible) return;
+
+                ctx.strokeStyle = func.color;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                let started = false;
+                for (let i = 0; i <= numPoints; i++) {
+                    const x = viewXMin + (i / numPoints) * xRange;
+                    const y = safeEval(func.expr, { x, ...func.params });
+
+                    if (!isFinite(y)) {
+                        started = false;
+                        continue;
+                    }
+
+                    const [cx, cy] = dataToCanvas(x, y);
+
+                    if (!started) {
+                        ctx.moveTo(cx, cy);
+                        started = true;
+                    } else {
+                        ctx.lineTo(cx, cy);
+                    }
+                }
+                ctx.stroke();
+            });
+
+            // 绘制标注点
+            annotations.forEach(ann => {
+                const [cx, cy] = dataToCanvas(ann.x, ann.y);
+                // 外圈光晕
+                ctx.fillStyle = ann.color + '40';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+                ctx.fill();
+                // 实心点
+                ctx.fillStyle = ann.color;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // 图例
+            const visibleFuncs = functions.filter(f => f.visible);
+            if (visibleFuncs.length > 0) {
+                let legendY = padding + 10;
+                ctx.font = '12px monospace';
+                visibleFuncs.forEach(f => {
+                    ctx.fillStyle = f.color;
+                    ctx.fillRect(w - padding - 150, legendY - 10, 12, 12);
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(f.expr, w - padding - 132, legendY);
+                    legendY += 18;
+                });
+            }
+        }
+
+        function getGridStep(range) {
+            const rawStep = range / 10;
+            const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+            const normalized = rawStep / magnitude;
+            if (normalized <= 1.5) return magnitude;
+            if (normalized <= 3.5) return 2 * magnitude;
+            if (normalized <= 7.5) return 5 * magnitude;
+            return 10 * magnitude;
+        }
+
+        // ========== 缩放和平移 ==========
+        function zoomIn() {
+            const cx = (viewXMin + viewXMax) / 2;
+            const cy = (viewYMin + viewYMax) / 2;
+            const xRange = (viewXMax - viewXMin) * 0.7;
+            const yRange = (viewYMax - viewYMin) * 0.7;
+            viewXMin = cx - xRange / 2;
+            viewXMax = cx + xRange / 2;
+            viewYMin = cy - yRange / 2;
+            viewYMax = cy + yRange / 2;
+            plot();
+        }
+
+        function zoomOut() {
+            const cx = (viewXMin + viewXMax) / 2;
+            const cy = (viewYMin + viewYMax) / 2;
+            const xRange = (viewXMax - viewXMin) * 1.4;
+            const yRange = (viewYMax - viewYMin) * 1.4;
+            viewXMin = cx - xRange / 2;
+            viewXMax = cx + xRange / 2;
+            viewYMin = cy - yRange / 2;
+            viewYMax = cy + yRange / 2;
+            plot();
+        }
+
+        function resetView() {
+            viewXMin = parseFloat(document.getElementById('xMin').value) || -10;
+            viewXMax = parseFloat(document.getElementById('xMax').value) || 10;
+            updateViewFromRange();
+            plot();
+            hideContextMenu();
+        }
+
+        function updateViewFromRange() {
+            const xMin = parseFloat(document.getElementById('xMin').value) || -10;
+            const xMax = parseFloat(document.getElementById('xMax').value) || 10;
+            const xRange = xMax - xMin;
+            const yRange = xRange * canvas.height / canvas.width;
+            viewXMin = xMin;
+            viewXMax = xMax;
+            viewYMin = -yRange / 2;
+            viewYMax = yRange / 2;
+        }
+
+        // ========== 鼠标事件 ==========
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const [x, y] = canvasToData(e.offsetX, e.offsetY);
+            const scale = e.deltaY > 0 ? 1.1 : 0.9;
+
+            viewXMin = x - (x - viewXMin) * scale;
+            viewXMax = x + (viewXMax - x) * scale;
+            viewYMin = y - (y - viewYMin) * scale;
+            viewYMax = y + (viewYMax - y) * scale;
+            plot();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isDragging = true;
+                dragStartX = e.offsetX;
+                dragStartY = e.offsetY;
+                canvas.style.cursor = 'grabbing';
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseCanvasX = e.offsetX;
+            mouseCanvasY = e.offsetY;
+            const [x, y] = canvasToData(e.offsetX, e.offsetY);
+            mouseX = x;
+            mouseY = y;
+
+            document.getElementById('coordBar').textContent =
+                `坐标: x = ${x.toFixed(4)}, y = ${y.toFixed(4)}`;
+
+            // 检测是否悬停在标注点上
+            let hoveredPoint = null;
+            let minDist = Infinity;
+            annotations.forEach(ann => {
+                const [cx, cy] = dataToCanvas(ann.x, ann.y);
+                const dist = Math.sqrt((e.offsetX - cx) ** 2 + (e.offsetY - cy) ** 2);
+                if (dist < 15 && dist < minDist) {
+                    minDist = dist;
+                    hoveredPoint = ann;
+                }
+            });
+
+            const tooltip = document.getElementById('pointTooltip');
+            if (hoveredPoint) {
+                showPointTooltip(hoveredPoint, e.clientX, e.clientY);
+            } else {
+                tooltip.style.display = 'none';
+            }
+
+            if (isDragging) {
+                const dx = (e.offsetX - dragStartX) / canvas.width * (viewXMax - viewXMin);
+                const dy = (e.offsetY - dragStartY) / canvas.height * (viewYMax - viewYMin);
+                viewXMin -= dx;
+                viewXMax -= dx;
+                viewYMin += dy;
+                viewYMax += dy;
+                dragStartX = e.offsetX;
+                dragStartY = e.offsetY;
+                plot();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'crosshair';
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.style.cursor = 'crosshair';
+            document.getElementById('pointTooltip').style.display = 'none';
+        });
+
+        // 右键菜单
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const [x, y] = canvasToData(e.offsetX, e.offsetY);
+
+            // 找最近的函数
+            let nearestFunc = null;
+            let minDist = Infinity;
+            functions.filter(f => f.visible).forEach(f => {
+                const fy = safeEval(f.expr, { x, ...f.params });
+                if (isFinite(fy)) {
+                    const dist = Math.abs(fy - y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestFunc = f;
+                    }
+                }
+            });
+
+            const menuInfo = document.getElementById('menuInfo');
+            const menuDeriv = document.getElementById('menuDeriv');
+
+            if (nearestFunc && minDist < 5) {
+                const fy = safeEval(nearestFunc.expr, { x, ...nearestFunc.params });
+                menuInfo.textContent = `函数值: f(${x.toFixed(2)}) = ${fy.toFixed(4)}`;
+                menuInfo.className = 'disabled';
+
+                const h = 1e-7;
+                const y1 = safeEval(nearestFunc.expr, { x: x - h, ...nearestFunc.params });
+                const y2 = safeEval(nearestFunc.expr, { x: x + h, ...nearestFunc.params });
+                if (isFinite(y1) && isFinite(y2)) {
+                    const deriv = (y2 - y1) / (2 * h);
+                    menuDeriv.textContent = `导数值: f'(${x.toFixed(2)}) = ${deriv.toFixed(4)}`;
+                } else {
+                    menuDeriv.textContent = '导数值: 无法计算';
+                }
+                menuDeriv.className = 'disabled';
+            } else {
+                menuInfo.textContent = `坐标: (${x.toFixed(4)}, ${y.toFixed(4)})`;
+                menuInfo.className = 'disabled';
+                menuDeriv.textContent = '导数值: -';
+                menuDeriv.className = 'disabled';
+            }
+
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) {
+                hideContextMenu();
+            }
+        });
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        function showPointTooltip(point, mouseX, mouseY) {
+            const tooltip = document.getElementById('pointTooltip');
+            const title = document.getElementById('tooltipTitle');
+            const content = document.getElementById('tooltipContent');
+
+            // 确定点的类型和颜色
+            let pointType = '关键点';
+            let pointColor = point.color;
+            if (point.color === 'red') pointType = '交点 / 极大值';
+            else if (point.color === '#e74c3c') pointType = '极大值';
+            else if (point.color === '#3498db') pointType = '极小值';
+            else if (point.color === '#27ae60') pointType = '零点';
+
+            title.innerHTML = `<span class="tooltip-color" style="background:${pointColor}"></span>${pointType}`;
+
+            // 查找最近的函数
+            let nearestFunc = null;
+            let minDist = Infinity;
+            functions.filter(f => f.visible).forEach(f => {
+                const fy = safeEval(f.expr, { x: point.x, ...f.params });
+                if (isFinite(fy)) {
+                    const dist = Math.abs(fy - point.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestFunc = f;
+                    }
+                }
+            });
+
+            let html = `
+                <div class="tooltip-row">
+                    <span class="tooltip-label">x 坐标:</span>
+                    <span class="tooltip-value">${point.x.toFixed(6)}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">y 坐标:</span>
+                    <span class="tooltip-value">${point.y.toFixed(6)}</span>
+                </div>
+            `;
+
+            if (nearestFunc) {
+                const fy = safeEval(nearestFunc.expr, { x: point.x, ...nearestFunc.params });
+
+                html += `
+                    <div class="tooltip-row" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2);">
+                        <span class="tooltip-label">函数:</span>
+                        <span class="tooltip-value" style="color:${nearestFunc.color}">${nearestFunc.expr}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">f(x):</span>
+                        <span class="tooltip-value">${fy.toFixed(6)}</span>
+                    </div>
+                `;
+
+                // 计算导数
+                const h = 1e-7;
+                const y1 = safeEval(nearestFunc.expr, { x: point.x - h, ...nearestFunc.params });
+                const y2 = safeEval(nearestFunc.expr, { x: point.x + h, ...nearestFunc.params });
+                if (isFinite(y1) && isFinite(y2)) {
+                    const deriv = (y2 - y1) / (2 * h);
+                    html += `
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">导数 f'(x):</span>
+                            <span class="tooltip-value">${deriv.toFixed(6)}</span>
+                        </div>
+                    `;
+                }
+
+                // 计算二阶导数
+                const y0 = safeEval(nearestFunc.expr, { x: point.x - h, ...nearestFunc.params });
+                const y3 = safeEval(nearestFunc.expr, { x: point.x + h, ...nearestFunc.params });
+                if (isFinite(y0) && isFinite(y3)) {
+                    const deriv2 = (y2 - 2 * fy + y1) / (h * h);
+                    html += `
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">二阶导 f''(x):</span>
+                            <span class="tooltip-value">${deriv2.toFixed(6)}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            content.innerHTML = html;
+
+            // 定位提示框
+            let left = mouseX + 20;
+            let top = mouseY - 10;
+
+            // 边界检测
+            const tooltipRect = tooltip.getBoundingClientRect();
+            if (left + 280 > window.innerWidth) {
+                left = mouseX - 290;
+            }
+            if (top + 200 > window.innerHeight) {
+                top = mouseY - 200;
+            }
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.display = 'block';
+        }
+
+        function copyCoord() {
+            const text = `(${mouseX.toFixed(4)}, ${mouseY.toFixed(4)})`;
+            navigator.clipboard.writeText(text);
+            hideContextMenu();
+        }
+
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = '函数图像.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            hideContextMenu();
+        }
+
+        // ========== 分析功能 ==========
+        function findIntersections() {
+            const visible = functions.filter(f => f.visible);
+            if (visible.length < 2) {
+                alert('需要至少两个可见函数才能求交点');
+                return;
+            }
+
+            annotations = [];
+            const numPoints = 5000;
+
+            for (let i = 0; i < visible.length; i++) {
+                for (let j = i + 1; j < visible.length; j++) {
+                    const f1 = visible[i], f2 = visible[j];
+                    const xArr = [];
+                    for (let k = 0; k <= numPoints; k++) {
+                        xArr.push(viewXMin + (k / numPoints) * (viewXMax - viewXMin));
+                    }
+
+                    const diff = xArr.map(x => {
+                        const y1 = safeEval(f1.expr, { x, ...f1.params });
+                        const y2 = safeEval(f2.expr, { x, ...f2.params });
+                        return isFinite(y1) && isFinite(y2) ? y1 - y2 : NaN;
+                    });
+
+                    for (let k = 0; k < diff.length - 1; k++) {
+                        if (isFinite(diff[k]) && isFinite(diff[k+1]) && diff[k] * diff[k+1] < 0) {
+                            // 二分法精化
+                            let xa = xArr[k], xb = xArr[k+1];
+                            for (let iter = 0; iter < 50; iter++) {
+                                const xm = (xa + xb) / 2;
+                                const ym1 = safeEval(f1.expr, { x: xm, ...f1.params });
+                                const ym2 = safeEval(f2.expr, { x: xm, ...f2.params });
+                                const fm = ym1 - ym2;
+                                if (Math.abs(fm) < 1e-10 || (xb - xa) / 2 < 1e-10) break;
+                                if (diff[k] * fm < 0) xb = xm; else xa = xm;
+                            }
+                            const xi = (xa + xb) / 2;
+                            const yi = safeEval(f1.expr, { x: xi, ...f1.params });
+                            annotations.push({ x: xi, y: yi, color: 'red' });
+                        }
+                    }
+                }
+            }
+
+            plot();
+            alert(`找到 ${annotations.length} 个交点`);
+        }
+
+        function findExtrema() {
+            const visible = functions.filter(f => f.visible);
+            if (visible.length === 0) {
+                alert('没有可见函数');
+                return;
+            }
+
+            annotations = [];
+            const numPoints = 5000;
+
+            visible.forEach(func => {
+                const xArr = [];
+                const yArr = [];
+                for (let k = 0; k <= numPoints; k++) {
+                    const x = viewXMin + (k / numPoints) * (viewXMax - viewXMin);
+                    const y = safeEval(func.expr, { x, ...func.params });
+                    xArr.push(x);
+                    yArr.push(y);
+                }
+
+                for (let k = 1; k < yArr.length - 1; k++) {
+                    if (!isFinite(yArr[k-1]) || !isFinite(yArr[k]) || !isFinite(yArr[k+1])) continue;
+                    if (yArr[k-1] <= yArr[k] && yArr[k] >= yArr[k+1] && (yArr[k-1] < yArr[k] || yArr[k] > yArr[k+1])) {
+                        annotations.push({ x: xArr[k], y: yArr[k], color: '#e74c3c' });
+                    } else if (yArr[k-1] >= yArr[k] && yArr[k] <= yArr[k+1] && (yArr[k-1] > yArr[k] || yArr[k] < yArr[k+1])) {
+                        annotations.push({ x: xArr[k], y: yArr[k], color: '#3498db' });
+                    }
+                }
+            });
+
+            plot();
+            alert(`找到 ${annotations.length} 个极值点`);
+        }
+
+        function findRoots() {
+            const visible = functions.filter(f => f.visible);
+            if (visible.length === 0) {
+                alert('没有可见函数');
+                return;
+            }
+
+            annotations = [];
+            const numPoints = 5000;
+
+            visible.forEach(func => {
+                const xArr = [];
+                const yArr = [];
+                for (let k = 0; k <= numPoints; k++) {
+                    const x = viewXMin + (k / numPoints) * (viewXMax - viewXMin);
+                    const y = safeEval(func.expr, { x, ...func.params });
+                    xArr.push(x);
+                    yArr.push(y);
+                }
+
+                for (let k = 0; k < yArr.length - 1; k++) {
+                    if (!isFinite(yArr[k]) || !isFinite(yArr[k+1])) continue;
+                    if (yArr[k] * yArr[k+1] < 0) {
+                        let xa = xArr[k], xb = xArr[k+1];
+                        for (let iter = 0; iter < 50; iter++) {
+                            const xm = (xa + xb) / 2;
+                            const ym = safeEval(func.expr, { x: xm, ...func.params });
+                            if (Math.abs(ym) < 1e-10 || (xb - xa) / 2 < 1e-10) break;
+                            if (yArr[k] * ym < 0) xb = xm; else xa = xm;
+                        }
+                        annotations.push({ x: (xa + xb) / 2, y: 0, color: '#27ae60' });
+                    }
+                }
+            });
+
+            plot();
+            alert(`找到 ${annotations.length} 个零点`);
+        }
+
+        function clearAnnotations() {
+            annotations = [];
+            plot();
+        }
+
+        // ========== 帮助 ==========
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'flex';
+        }
+
+        function hideHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        // ========== 初始化 ==========
+        function init() {
+            // 生成预设按钮
+            const presetsEl = document.getElementById('presets');
+            PRESETS.forEach((p, i) => {
+                const btn = document.createElement('button');
+                btn.textContent = p.label;
+                btn.onclick = () => addFunction(p.expr);
+                presetsEl.appendChild(btn);
+            });
+
+            resizeCanvas();
+        }
+
+        init();
+    </script>
+</body>
+</html>

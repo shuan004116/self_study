@@ -1,0 +1,17 @@
+{
+  "id": "ireiya",
+  "displayName": "伊蕾雅",
+  "description": "银发蓝瞳的Q版学妹，温柔可爱，陪伴你的每一天",
+  "version": "1.0.0",
+  "author": "伊蕾雅",
+  "spritesheetPath": "spritesheet.png",
+  "frameSize": {
+    "width": 192,
+    "height": 208
+  },
+  "grid": {
+    "col": 8,
+    "row": 9
+  },
+  "transparent": true
+}

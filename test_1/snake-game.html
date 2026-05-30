@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贪吃蛇</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #1a1a2e;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  .game-wrapper {
+    background: #16213e; border-radius: 16px;
+    padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  canvas {
+    display: block; border-radius: 8px;
+    background: #0f3460; box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+  }
+  .info-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 16px; color: #e94560;
+  }
+  .score { font-size: 20px; font-weight: bold; }
+  .score span { color: #fff; }
+  .btn {
+    background: #e94560; color: #fff; border: none;
+    padding: 8px 20px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #c73652; }
+  .hint { color: #aaa; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="game-wrapper">
+  <canvas id="game" width="400" height="400"></canvas>
+  <div class="info-bar">
+    <div class="score">得分: <span id="scoreDisplay">0</span></div>
+    <button class="btn" id="restartBtn">重新开始</button>
+  </div>
+  <div class="hint" style="text-align:center;margin-top:8px;">方向键 / WASD 控制移动</div>
+</div>
+<script>
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+
+  const GRID_SIZE = 20;
+  const COLS = canvas.width / GRID_SIZE;
+  const ROWS = canvas.height / GRID_SIZE;
+
+  let snake, direction, nextDirection, food, score, gameOver, gameLoop;
+
+  function init() {
+    snake = [
+      { x: 5, y: 10 },
+      { x: 4, y: 10 },
+      { x: 3, y: 10 }
+    ];
+    direction = 'right';
+    nextDirection = 'right';
+    score = 0;
+    gameOver = false;
+    scoreDisplay.textContent = '0';
+    spawnFood();
+    draw();
+  }
+
+  function spawnFood() {
+    const total = COLS * ROWS;
+    if (snake.length >= total) {
+      food = null;
+      return;
+    }
+    const occupied = new Set(snake.map(s => `${s.x},${s.y}`));
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+    } while (occupied.has(`${pos.x},${pos.y}`));
+    food = pos;
+  }
+
+  function update() {
+    if (gameOver) return;
+
+    direction = nextDirection;
+
+    const head = { ...snake[0] };
+    switch (direction) {
+      case 'up':    head.y--; break;
+      case 'down':  head.y++; break;
+      case 'left':  head.x--; break;
+      case 'right': head.x++; break;
+    }
+
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+      endGame(); return;
+    }
+
+    for (const seg of snake) {
+      if (head.x === seg.x && head.y === seg.y) {
+        endGame(); return;
+      }
+    }
+
+    snake.unshift(head);
+
+    if (food && head.x === food.x && head.y === food.y) {
+      score++;
+      scoreDisplay.textContent = score;
+      spawnFood();
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function endGame() {
+    gameOver = true;
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let x = 0; x < COLS; x++) {
+      for (let y = 0; y < ROWS; y++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#0f3460' : '#0d2e54';
+        ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+      }
+    }
+
+    if (food) {
+      ctx.fillStyle = '#e94560';
+      ctx.shadowColor = '#e94560';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(food.x * GRID_SIZE + GRID_SIZE/2, food.y * GRID_SIZE + GRID_SIZE/2, GRID_SIZE/2 - 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    snake.forEach((seg, i) => {
+      const t = 1 - i / snake.length;
+      const size = GRID_SIZE - 4 - (1 - t) * 2;
+      const offset = (GRID_SIZE - size) / 2;
+      const r = Math.round(57 + (255 - 57) * t);
+      const g = Math.round(62 + (105 - 62) * t);
+      const b = Math.round(72 + (80 - 72) * t);
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+
+      if (i === 0) {
+        ctx.shadowColor = '#e94560';
+        ctx.shadowBlur = 6;
+      }
+      ctx.beginPath();
+      ctx.roundRect(seg.x * GRID_SIZE + offset, seg.y * GRID_SIZE + offset, size, size, 4);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#e94560';
+      ctx.font = 'bold 32px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('游戏结束', canvas.width/2, canvas.height/2 - 18);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px "Segoe UI", sans-serif';
+      ctx.fillText('按「重新开始」再来一局', canvas.width/2, canvas.height/2 + 24);
+    }
+  }
+
+  function startLoop() {
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(update, 130);
+  }
+
+  init();
+  startLoop();
+
+  document.addEventListener('keydown', e => {
+    if (gameOver) return;
+    const key = e.key.toLowerCase();
+    const map = {
+      'arrowup': 'up', 'arrowdown': 'down', 'arrowleft': 'left', 'arrowright': 'right',
+      'w': 'up', 's': 'down', 'a': 'left', 'd': 'right'
+    };
+    const dir = map[key] || map[e.key];
+    if (!dir) return;
+    e.preventDefault();
+
+    const opposite = { 'up': 'down', 'down': 'up', 'left': 'right', 'right': 'left' };
+    if (dir === opposite[direction]) return;
+
+    nextDirection = dir;
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    init();
+    startLoop();
+  });
+</script>
+</body>
+</html>

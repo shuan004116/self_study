@@ -1,0 +1,36 @@
+{
+  "name": "focusflow",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FocusFlow — 智能桌面学习专注平台",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.cjs",
+    "dev:web": "vite",
+    "build": "tsc && vite build",
+    "build:electron": "node scripts/build.cjs",
+    "preview": "vite preview",
+    "start": "electron .",
+    "package": "vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.4.2"
+  }
+}

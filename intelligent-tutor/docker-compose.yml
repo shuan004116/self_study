@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      sh -c "ollama serve &
+             sleep 3 &&
+             ollama pull qwen2.5:14b &&
+             ollama pull bge-m3:latest &&
+             wait"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_DB_PATH=/app/data/chromadb
+      - DEBUG=true
+    volumes:
+      - app_data:/app/data
+      - ./knowledge_base:/app/knowledge_base:ro
+    depends_on:
+      - ollama
+    command: >
+      sh -c "uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    image: node:20-alpine
+    ports:
+      - "5173:5173"
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  ollama_data:
+  app_data:
