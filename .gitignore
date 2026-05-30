@@ -59,6 +59,17 @@ out/
 *.log
 logs/
 
+# 隐私数据文件
+*考勤*.csv
+*出勤*.csv
+*工资*.csv
+*薪资*.csv
+*个人信息*.csv
+*成绩*.csv
+*.id
+*.pem
+*.key
+
 # 临时文件
 *.tmp
 *.temp
