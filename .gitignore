@@ -42,6 +42,13 @@ Thumbs.db
 release/
 dist/
 out/
+*.pak
+*.dll
+*.dat
+*.asar
+*.bin
+*.exe
+*.blockmap
 
 # 环境变量
 .env
